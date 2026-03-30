@@ -7,6 +7,8 @@ module Main where
 
 import Network.WebSockets
 import qualified Data.Text as T
+import Control.Concurrent (threadDelay)
+
 
 main :: IO ()
 main = do
@@ -22,11 +24,23 @@ app pending = do
 
   loop conn
 
+
+timer :: IO ()
+timer = do
+  putStrLn "Tick!"
+  threadDelay (10 * 1000000) -- 10 sekunder
+  timer
+
 loop :: Connection -> IO ()
 loop conn = do
   msg <- receiveData conn :: IO T.Text
   putStrLn ("Received: " ++ T.unpack msg)
 
-  sendTextData conn ("Echo: " <> msg)
+  --sendTextData conn ("Echo: " <> msg)
+  timer
+
+  sendTextData conn (msg)
+  let new = T.reverse msg
+  sendTextData conn (new)
 
   loop conn
