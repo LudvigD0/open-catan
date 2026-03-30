@@ -1,0 +1,16 @@
+# Cabal
+dist-newstyle/
+dist/
+cabal.project.local
+cabal.project.local~
+
+# GHC
+*.hi
+*.o
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
