@@ -30,3 +30,15 @@
     7. Building phase  (Road, Settelment, City)
     8. Check VP >= 10 -> Endgame 
     9. Next player, repeat from 5 
+--}
+
+diceResult :: IO (Int, Int)
+diceResult = do dice1 <- randomR (1, 6)
+                dice2 <- randomR (1, 6)
+                return (dice1, dice2)
+
+getResourcesOfNum :: Board -> Player -> Int -> [Resource]
+getResourcesOfNum brd n p = undefined
+
+
+
