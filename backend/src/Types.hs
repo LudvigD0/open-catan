@@ -1,49 +1,41 @@
+import Data.Map (Map)
 
 -- Storage
 -- data DataTile = DataResourceTile (Maybe Resource) Token Robber
 
--- data GameState = GameState 
-
+-- data GameState = GameState
 
 data Cord = Cord Int Int Int
 
-data Board = Board 
-{
-    Tiles :: Map Cord GraphTile
-}
+data Board = Board {tiles :: Map Cord GraphTile}
 
-data Building = Settlement PlayerId | City PlayerId 
+data Building = Settlement PlayerId | City PlayerId
 
-data Bridge = PlayerId 
+data Bridge = PlayerId
 
-data Player = Player 
-{
-    PlayerId  :: Int,
-    Points    :: Int,
-    Buildings :: [Building],
-    Bridges     :: [Bridge]
-}
+data Player = Player
+  { playerId :: Int,
+    points :: Int,
+    buildings :: [Building],
+    bridges :: [Bridge]
+  }
 
-data DataTile = DataTile 
-{
-    Resource :: Maybe Resource,
-    Token :: Int,
-    Robber :: Bool
-}
+data DataTile = DataTile
+  { resource :: Maybe Resource,
+    token :: Int,
+    robber :: Bool
+  }
 
 data DataEdge = DataEdge (Maybe Bridge)
 
 data DataNode = DataNode (Maybe Building)
 
 -- Graph Structure
-data GraphTile = GraphTile DataTile [GraphNode]
-
-data GraphTile = GraphTile 
-{
-    GraphTileId :: Int,
-    DataTile    :: DataTile,
-    Nodes       :: [GraphNode]
-}
+data GraphTile = GraphTile
+  { graphTileId :: Int,
+    dataTile :: DataTile,
+    nodes :: [GraphNode]
+  }
 
 data GraphEdge = GraphEdge DataEdge (GraphNode, GraphNode)
 
