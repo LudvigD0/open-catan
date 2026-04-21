@@ -1,3 +1,5 @@
+module Types where
+
 import Data.Map (Map)
 
 -- Storage
@@ -9,15 +11,15 @@ data Cord = Cord Int Int Int
 
 data Board = Board {tiles :: Map Cord GraphTile}
 
-data Building = Settlement PlayerId | City PlayerId
+data Building = Settlement Player | City Player
 
-data Bridge = PlayerId
+data Road = PlayerId
 
 data Player = Player
   { playerId :: Int,
     points :: Int,
-    buildings :: [Building],
-    bridges :: [Bridge]
+    buildings :: [(Building, GraphNode)],
+    bridges :: [(Road, GraphEdge)]
   }
 
 data DataTile = DataTile
@@ -26,9 +28,9 @@ data DataTile = DataTile
     robber :: Bool
   }
 
-data DataEdge = DataEdge (Maybe Bridge)
+data DataEdge = DataEdge { road :: Maybe Road }
 
-data DataNode = DataNode (Maybe Building)
+data DataNode = DataNode { building :: Maybe Building }
 
 -- Graph Structure
 data GraphTile = GraphTile
@@ -40,3 +42,6 @@ data GraphTile = GraphTile
 data GraphEdge = GraphEdge DataEdge (GraphNode, GraphNode)
 
 data GraphNode = GraphNode DataNode [GraphEdge] [GraphTile]
+
+data Resource = Wool | Grain | Wood | Brick | Rock
+  deriving ( Show )

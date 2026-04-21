@@ -1,3 +1,9 @@
+module Catan where
+
+import Types
+import System.Random
+import Data.Maybe (catMaybes)
+
 {-- 
 - Init Game state
     1. Initialize empty board 
@@ -33,12 +39,22 @@
 --}
 
 diceResult :: IO (Int, Int)
-diceResult = do dice1 <- randomR (1, 6)
-                dice2 <- randomR (1, 6)
+diceResult = do dice1 <- randomRIO (1, 6)
+                dice2 <- randomRIO (1, 6)
                 return (dice1, dice2)
 
-getResourcesOfNum :: Board -> Player -> Int -> [Resource]
-getResourcesOfNum brd n p = undefined
+getResource :: GraphTile -> Maybe Resource
+getResource = resource . dataTile
+
+getResourcesFromTiles :: GraphNode -> [Resource]
+getResourcesFromTiles (GraphNode dat _ t) = case building dat of
+    Just (Settlement _) -> r ++ r
+    Just (City _      ) -> r
+    Nothing             -> []
+    where r = catMaybes [getResource x | x <- t]
+
+getResourcesOfNum :: Int -> Player -> [Resource]
+getResourcesOfNum n p = concatMap (getResourcesFromTiles . snd) (buildings p)
 
 
 
