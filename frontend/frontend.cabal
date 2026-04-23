@@ -54,9 +54,23 @@ extra-doc-files:    CHANGELOG.md
 common warnings
     ghc-options: -Wall
 
+common options
+  if arch(wasm32)
+    ghc-options:
+      -no-hs-main
+      -optl-mexec-model=reactor
+      "-optl-Wl,--export=hs_start"
+    cpp-options:
+      -DWASM
+
+  if arch(javascript)
+     ld-options:
+       -sEXPORTED_RUNTIME_METHODS=HEAP8
+
 executable frontend
     -- Import common warning flags.
-    import:           warnings
+    import:           warnings,
+                      options
 
     -- .hs or .lhs file containing the Main module.
     main-is:          Main.hs
@@ -68,7 +82,7 @@ executable frontend
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.18.3.0,
+    build-depends:    base >=4.18 && <5,
                       miso,
 
     -- Directories containing source files.
