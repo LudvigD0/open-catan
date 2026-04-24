@@ -70,7 +70,15 @@ executable backend
     build-depends:    
         base ^>=4.18.3.0,
         websockets,
-        text
+        text,
+        containers,   
+        random,
+        uuid
+    other-modules:
+        Types
+        Util
+        Coordinates
+        Catan
 
     -- Directories containing source files.
     hs-source-dirs:   src
