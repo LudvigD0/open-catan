@@ -2,7 +2,7 @@ module Catan where
 
 import Types
 import System.Random
-import Data.Maybe (catMaybes)
+import Data.Maybe (mapMaybe, isJust)
 
 {-- 
 - Init Game state
@@ -46,15 +46,18 @@ diceResult = do dice1 <- randomRIO (1, 6)
 getResource :: GraphTile -> Maybe Resource
 getResource = resource . dataTile
 
-getResourcesFromTiles :: GraphNode -> [Resource]
-getResourcesFromTiles (GraphNode dat _ t) = case building dat of
-    Just (Settlement _) -> r ++ r
-    Just (City _      ) -> r
+-- this function is for a filter (GraphTile -> Bool) 
+getResourcesFromTiles :: (GraphTile -> Bool) -> GraphNode -> [Resource]
+getResourcesFromTiles f (GraphNode dat _ t) = case building dat of
+    Just (Settlement _) -> r
+    Just (City _      ) -> r ++ r
     Nothing             -> []
-    where r = catMaybes [getResource x | x <- t]
+    where r = mapMaybe getResource (filter f t)
 
 getResourcesOfNum :: Int -> Player -> [Resource]
-getResourcesOfNum n p = concatMap (getResourcesFromTiles . snd) (buildings p)
-
-
-
+getResourcesOfNum n p = concatMap (getResourcesFromTiles hasToken . snd) $ buildingFilter (buildings p)
+    where
+        hasToken gt = n == token (dataTile gt)
+        
+        buildingFilter = filter (hasBuilding . snd) -- It just has to be here since haskell has to 100% make sure the building exists
+        hasBuilding (GraphNode dn _ _) = isJust $ building dn
