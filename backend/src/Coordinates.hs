@@ -50,29 +50,29 @@ neighbours c = map (addCord c) directions
 tileData :: [(Maybe Resource, Int)]
 tileData =
     -- 3 tiles, top
-    [ (Just Stone,   10)
-    , (Just Sheep,    2)
-    , (Just Wood,     9)
+    [ (Just Ore,   10)
+    , (Just Wool,    2)
+    , (Just Lumber,     9)
     -- 4 tiles
-    , (Just Wheat,   12)
-    , (Just Clay,     6)
-    , (Just Sheep,    4)
-    , (Just Clay,    10)
+    , (Just Grain,   12)
+    , (Just Brick,     6)
+    , (Just Wool,    4)
+    , (Just Brick,    10)
     -- 5 tiles, middle
-    , (Just Wheat,    9)
-    , (Just Wood,    11)
+    , (Just Grain,    9)
+    , (Just Lumber,    11)
     , (Nothing,       0)   -- Desert
-    , (Just Wood,     3)
-    , (Just Stone,    8)
+    , (Just Lumber,     3)
+    , (Just Ore,    8)
     -- 4 tiles
-    , (Just Wood,     8)
-    , (Just Stone,    3)
-    , (Just Wheat,    4)
-    , (Just Sheep,    5)
+    , (Just Lumber,     8)
+    , (Just Ore,    3)
+    , (Just Grain,    4)
+    , (Just Wool,    5)
     -- 3 tiles, bottom
-    , (Just Clay,     5)
-    , (Just Wheat,    6)
-    , (Just Sheep,   11)
+    , (Just Brick,     5)
+    , (Just Grain,    6)
+    , (Just Wool,   11)
     ]
 
 makeTile :: Int -> (Maybe Resource, Int) -> (Cord, Tile)
