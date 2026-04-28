@@ -6,6 +6,8 @@ import Coordinates
 import qualified Data.Map as Map 
 import System.Random
 import Data.Maybe (mapMaybe, isJust)
+import Data.List (nub)
+import Data.Map (elems, fromList, keys)
 
 {-- 
 
@@ -62,8 +64,11 @@ initBoard = Board { tiles = Map.fromList catanTiles }
 nextTurn :: TurnPhase -> TurnPhase 
 nextTurn Roll = Build 
 nextTurn Build = Trade
-nextTurn Trade = Roll   
+nextTurn Trade = Roll
 
+
+getAllNodes :: Board -> [Node]
+getAllNodes = nub . concatMap nodes . elems . tiles
 
 diceResult :: IO (Int, Int)
 diceResult = do dice1 <- randomRIO (1, 6)
@@ -72,11 +77,11 @@ diceResult = do dice1 <- randomRIO (1, 6)
 
 -- this function is for a filter (GraphTile -> Bool) 
 getResourcesFromTiles :: (Tile -> Bool) -> Node -> [Resource]
-getResourcesFromTiles f (Node _ b _ t) = case b of
+getResourcesFromTiles f (Node _ b _ ts) = case b of
     Just (Settlement _) -> r
     Just (City _      ) -> r ++ r
     Nothing             -> []
-    where r = mapMaybe resource (filter f t)
+    where r = mapMaybe resource (filter f ts)
 
 getResourcesOfNum :: Int -> Player -> [Resource]
 getResourcesOfNum n p = concatMap (getResourcesFromTiles hasToken) $ buildingFilter (buildings p)
@@ -85,3 +90,30 @@ getResourcesOfNum n p = concatMap (getResourcesFromTiles hasToken) $ buildingFil
         
         buildingFilter = filter hasBuilding -- It just has to be here since haskell has to 100% make sure the building exists
         hasBuilding (Node _ b _ _) = isJust b
+
+-- Updaters
+placeBuilding :: Board -> Building -> NodeId -> Board
+placeBuilding b build idn = undefined
+
+{-
+TODO:
+replaceNodes :: Board -> (Node -> Node) -> [NodeId] -> Board
+replaceNodes b f idns = Board { tiles = fromList (zip (keys (tiles b)) newMap) }
+    where
+        newMap = map newTile b
+        
+        newTile t = if foldr isChangeNode False . nodes t
+            then t { nodes = map newNode (nodes t) }
+            else t
+
+        newNode n = if isChangeNode n
+            then f n
+            else n
+        
+        isChangeNode (Node idn _ _ _) = idn `elem` idns
+
+replaceEdges :: Board -> (Edge -> Edge) -> [EdgeId] -> Board
+replaceEdges b ides = Board { tiles = newMap }
+    where
+        newMap = undefined
+-}
