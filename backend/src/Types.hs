@@ -1,7 +1,8 @@
 module Types where 
-import Data.Map (Map, fromList)
+import Data.Map (Map, fromList, elems)
 import Data.UUID
 import Data.Word
+import Data.List (nub)
 
 -- Storage
 -- data DataTile = DataResourceTile (Maybe Resource) Token Robber
@@ -13,8 +14,8 @@ data Board = Board {tiles :: Map Cord Tile} deriving Show
 -- Catan types 
 data Color    = Red | Blue | Orange | White deriving (Show, Eq)
 data Resource = Lumber | Ore | Grain | Brick | Wool deriving (Show, Eq)
-data Road     = Road PlayerId deriving Show
-data Building = Settlement PlayerId | City PlayerId deriving Show
+data Road     = Road PlayerId deriving (Show, Eq)
+data Building = Settlement PlayerId | City PlayerId deriving (Show, Eq)
 
 -- Player
 newtype PlayerId = PlayerId UUID deriving (Show, Eq)
@@ -41,7 +42,7 @@ data GameState = GameState
   , dice        :: (Int, Int)
   } deriving Show
 
-data TurnPhase = Roll | Build | Trade deriving Show
+data TurnPhase = Roll | Build | Trade deriving (Show, Eq)
 
 -- Graph Structure
 data Tile = Tile
@@ -50,14 +51,31 @@ data Tile = Tile
   , token :: Int
   , robber :: Bool
   , nodes :: [Node]
-  } deriving Show
+  } deriving (Show, Eq)
 
-newtype EdgeId = EdgeId Int deriving Show
-newtype NodeId = NodeId Int deriving Show
+newtype EdgeId = EdgeId Int deriving (Show, Eq)
+newtype NodeId = NodeId Int deriving (Show, Eq)
 
-data Edge = Edge EdgeId (Maybe Road) (Node, Node) deriving Show
+data Edge = Edge 
+  { edgeId :: EdgeId
+  , road :: Maybe Road
+  , path :: (Node, Node)
+  } deriving (Show, Eq)
 
-data Node = Node NodeId (Maybe Building) [Edge] [Tile] deriving Show
+data Node = Node 
+  { nodeId :: NodeId
+  , building :: Maybe Building
+  , edges :: [Edge]
+  , nodeTiles :: [Tile] 
+  } deriving (Show, Eq)
+
+
+-- Generic funcions
+getAllNodes :: Board -> [Node]
+getAllNodes = nub . concatMap nodes . elems . tiles
+
+getAllEdges :: Board -> [Edge]
+getAllEdges = nub . concatMap edges . getAllNodes
 
 -- example Boards
 exampleBoard1 = Board { tiles = fromList [(Cord 0 0 0, exampleTile11)] }
