@@ -8,6 +8,8 @@ import System.Random
 import Data.Maybe (mapMaybe, isJust)
 import Data.List (nub)
 import Data.Map (elems, fromList, keys)
+import Data.Foldable (concat)
+import GHC.Base (undefined)
 
 {-- 
 
@@ -35,7 +37,7 @@ s--}
 main :: IO ()
 main = do
     (GameState _ b ps _ _ _) <- initGameState
-    print [pid | (_, (Player pid _ _ _ )) <- ps ]  -- test player ids 
+    print [pid | (_, (Player pid _ _ _ _)) <- ps ]  -- test player ids 
     print b
 
 initGameState :: IO GameState
@@ -67,53 +69,75 @@ nextTurn Build = Trade
 nextTurn Trade = Roll
 
 
-getAllNodes :: Board -> [Node]
-getAllNodes = nub . concatMap nodes . elems . tiles
+-- 1. game loop and rules
+
+gameLoop :: GameState -> IO ()
+gameLoop = do
+    (d1, d2) <- diceResult
+    givePlayersResources (d1 + d2)
+    -- Place buildings with some updaters using Player input
+    -- check VP
+    -- update GameState
+    gameLoop undefined
+
 
 diceResult :: IO (Int, Int)
 diceResult = do dice1 <- randomRIO (1, 6)
                 dice2 <- randomRIO (1, 6)
                 return (dice1, dice2)
 
--- this function is for a filter (GraphTile -> Bool) 
+-- the function input is a filter, use f = True if you don't need it.
 getResourcesFromTiles :: (Tile -> Bool) -> Node -> [Resource]
-getResourcesFromTiles f (Node _ b _ ts) = case b of
+getResourcesFromTiles f n = case building n of
     Just (Settlement _) -> r
     Just (City _      ) -> r ++ r
     Nothing             -> []
-    where r = mapMaybe resource (filter f ts)
+    where r = mapMaybe resource $ filter f $ nodeTiles n
 
 getResourcesOfNum :: Int -> Player -> [Resource]
 getResourcesOfNum n p = concatMap (getResourcesFromTiles hasToken) $ buildingFilter (buildings p)
     where
-        hasToken tile = n == token tile
-        
+        hasToken tile = n == token tile && not (robber tile)
         buildingFilter = filter hasBuilding -- It just has to be here since haskell has to 100% make sure the building exists
         hasBuilding (Node _ b _ _) = isJust b
 
 -- Updaters
-placeBuilding :: Board -> Building -> NodeId -> Board
-placeBuilding b build idn = undefined
-
-{-
-TODO:
-replaceNodes :: Board -> (Node -> Node) -> [NodeId] -> Board
-replaceNodes b f idns = Board { tiles = fromList (zip (keys (tiles b)) newMap) }
+givePlayersResources :: Int -> GameState -> GameState
+givePlayersResources n gs = gs { players = newPlayers }
     where
-        newMap = map newTile b
-        
-        newTile t = if foldr isChangeNode False . nodes t
-            then t { nodes = map newNode (nodes t) }
-            else t
+        newPlayers p = map (addCards . snd)
+        addCards = resourceCards p ++ getResourcesOfNum n
 
-        newNode n = if isChangeNode n
-            then f n
-            else n
-        
-        isChangeNode (Node idn _ _ _) = idn `elem` idns
+removePlayerResources :: Player -> ([Resource] -> [Resource]) -> GameState -> GameState
+removePlayerResources p f = undefined -- TODO
 
-replaceEdges :: Board -> (Edge -> Edge) -> [EdgeId] -> Board
-replaceEdges b ides = Board { tiles = newMap }
+placeRobber :: TileId -> Board -> Board
+placeRobber idn = undefined -- TODO
+
+placeBuilding :: Building -> NodeId -> Board -> Board
+placeBuilding bld idn = replaceNodes (\x -> x { building = Just bld }) [idn]
+
+placeRoad :: Road -> EdgeId -> Board -> Board
+placeRoad ro ide = replaceEdges (\x -> x { road = Just ro }) [ide]
+
+replaceTiles :: (Tile -> Tile) -> [TileId] -> Board -> Board
+replaceTiles = Board { tiles = fromList (zip cords newMap) }
     where
-        newMap = undefined
--}
+        cords = keys (tiles b)
+        newMap = map f b
+
+replaceNodes :: (Node -> Node) -> [NodeId] -> Board -> Board
+replaceNodes f idns b = Board { tiles = fromList (zip cords newMap) }
+    where
+        cords = keys (tiles b)
+        newMap = map applyf b
+        applyf t = map f . filter isChangeNode . nodes
+        isChangeNode n = nodeId n `elem` idns
+
+replaceEdges :: (Edge -> Edge) -> [EdgeId] -> Board -> Board
+replaceEdges ides b = Board { tiles = fromList (zip cords newMap) }
+    where
+        cords = keys (tiles b)
+        newMap = map applyf b
+        applyf t = map f . filter isChangeEdge . edges . nodes
+        isChangeEdge e = edgeId e `elem` ides
