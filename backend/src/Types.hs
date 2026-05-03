@@ -1,15 +1,16 @@
 module Types where 
-import Data.Map (Map, fromList, elems)
+import Data.Map (Map, fromList, toList, elems)
 import Data.UUID
 import Data.Word
 import Data.List (nub)
+import Data.Tuple.Extra (both)
 
 -- Storage
 -- data DataTile = DataResourceTile (Maybe Resource) Token Robber
 
 -- Board 
 data Cord = Cord Int Int Int deriving (Show, Eq, Ord)
-data Board = Board {tiles :: Map Cord Tile} deriving Show
+data Board = Board {tiles :: Map Cord Tile}
 
 -- Catan types 
 data Color    = Red | Blue | Orange | White deriving (Show, Eq)
@@ -24,8 +25,9 @@ data Player = Player
   { playerId :: PlayerId,
     points :: Int,
     buildings :: [Node],
-    roads :: [Edge]
-  } deriving Show
+    roads :: [Edge],
+    resourceCards :: [Resource]
+  }
 
 -- Game 
 
@@ -40,35 +42,93 @@ data GameState = GameState
   , currentTurn :: Int              -- Index of player  
   , phase       :: TurnPhase       
   , dice        :: (Int, Int)
-  } deriving Show
+  }
 
 data TurnPhase = Roll | Build | Trade deriving (Show, Eq)
 
 -- Graph Structure
+newtype TileId = TileId Int deriving (Show, Eq)
+newtype EdgeId = EdgeId Int deriving (Show, Eq)
+newtype NodeId = NodeId Int deriving (Show, Eq)
+
 data Tile = Tile
   { tileId :: Int
   , resource :: Maybe Resource
   , token :: Int
   , robber :: Bool
   , nodes :: [Node]
-  } deriving (Show, Eq)
-
-newtype EdgeId = EdgeId Int deriving (Show, Eq)
-newtype NodeId = NodeId Int deriving (Show, Eq)
+  }
 
 data Edge = Edge 
   { edgeId :: EdgeId
   , road :: Maybe Road
   , path :: (Node, Node)
-  } deriving (Show, Eq)
+  }
 
 data Node = Node 
   { nodeId :: NodeId
   , building :: Maybe Building
   , edges :: [Edge]
   , nodeTiles :: [Tile] 
-  } deriving (Show, Eq)
+  }
 
+instance Eq GameState where
+  a == b = gameId a == gameId b
+
+instance Eq Player where
+  a == b = playerId a == playerId b
+
+instance Eq Node where
+  a == b = nodeId a == nodeId b
+
+instance Eq Edge where
+  a == b = edgeId a == edgeId b
+
+instance Eq Tile where
+  a == b = tileId a == tileId b
+
+instance Show Board where
+  show = (++) " tiles: " . show . map tupleRepl . toList . tiles
+    where
+      tupleRepl (c, t) = (c, tileId t)
+
+instance Show GameState where
+  show gs = "id: " ++ show (gameId gs) ++
+            " players: " ++ show (map shortPlayer (players gs)) ++ 
+            " turn: " ++ show (currentTurn gs) ++ 
+            " phase: " ++ show (phase gs) ++
+            " dice: " ++ diceCase (dice gs)
+    where
+      shortPlayer (c, p) = (c, playerId p)
+      diceCase dices = case dices of
+        (0, 0)   -> "no Dices thrown"
+        (d1, d2) -> show d1 ++ " " ++ show d2
+
+instance Show Player where
+  show p = "id: " ++ show (playerId p) ++
+            " points: " ++ show (points p) ++ 
+            " buildings: " ++ show (map nodeId (buildings p)) ++ 
+            " bridges: " ++ show (map edgeId (roads p)) ++
+            " cards: " ++ show (resourceCards p)
+
+instance Show Node where
+  show n = "id: " ++ show (nodeId n) ++
+            " building: " ++ show (building n) ++ 
+            " near edges: " ++ show (map edgeId (edges n)) ++ 
+            " near tiles: " ++ show (map tileId (nodeTiles n))
+
+instance Show Edge where
+  show e = "id: " ++ show (edgeId e) ++
+            " road: " ++ show (road e) ++ 
+            " path: " ++ show (both nodeId (path e))
+
+
+instance Show Tile where
+  show t = "id: " ++ show (tileId t) ++
+            " resource: " ++ show (resource t) ++ 
+            " token: " ++ show (token t) ++ 
+            " robber: " ++ show (robber t) ++ 
+            " near nodes: " ++ show (map nodeId (nodes t))
 
 -- Generic funcions
 getAllNodes :: Board -> [Node]
@@ -109,7 +169,8 @@ examplePlayer1 = Player
   { playerId = PlayerId $ fromWords64 1 1,
     points = 1,
     buildings = [exampleNode1],
-    roads = []
+    roads = [],
+    resourceCards = []
   }
 
 
@@ -175,5 +236,6 @@ examplePlayer2 = Player
   { playerId = PlayerId $ fromWords64 2 2,
     points = 1,
     buildings = [exampleNode21],
-    roads = [exampleEdge21]
+    roads = [exampleEdge21],
+    resourceCards = []
   }
