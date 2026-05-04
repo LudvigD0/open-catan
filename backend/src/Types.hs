@@ -25,9 +25,15 @@ data Player = Player
   { playerId :: PlayerId,
     points :: Int,
     buildings :: [Node],
-    roads :: [Edge],
-    resourceCards :: [Resource]
-  }
+    roads :: [Edge]
+  } deriving Show
+
+{- data Player = Player
+  { playerId  :: PlayerId,
+    points    ::  Int,
+    buildings :: [NodeId],
+    roads     :: [EdgeId]
+  } deriving Show -}
 
 -- Game 
 
@@ -52,7 +58,31 @@ newtype EdgeId = EdgeId Int deriving (Show, Eq)
 newtype NodeId = NodeId Int deriving (Show, Eq)
 
 data Tile = Tile
-  { tileId :: Int
+  { tileId   :: Int
+  , resource :: Maybe Resource
+  , token    :: Int
+  , robber   :: Bool
+  , nodes    :: [Node]
+  , edges    :: [Edge]
+  } deriving Show
+
+data Edge = Edge
+  { edgeId  :: EdgeId
+  , road    :: Maybe Road
+  , edgeNodes :: (Node, Node)
+  } deriving Show
+
+data Node = Node
+  { nodeId    :: NodeId
+  , building  :: Maybe Building
+  , nodeEdges :: [Edge]
+  , nodeTiles :: [Int]    -- stores tileId instead of Tile to break cyclical referensing
+  } deriving Show
+
+
+{-
+data Tile = Tile
+  { tileId   :: Int
   , resource :: Maybe Resource
   , token :: Int
   , robber :: Bool
@@ -137,6 +167,9 @@ getAllNodes = nub . concatMap nodes . elems . tiles
 getAllEdges :: Board -> [Edge]
 getAllEdges = nub . concatMap edges . getAllNodes
 
+
+
+
 -- example Boards
 exampleBoard1 = Board { tiles = fromList [(Cord 0 0 0, exampleTile11)] }
 exampleTile11 = Tile 
@@ -172,8 +205,6 @@ examplePlayer1 = Player
     roads = [],
     resourceCards = []
   }
-
-
 
 exampleBoard2 = Board { tiles = fromList [(Cord 0 0 0, exampleTile21)] }
 exampleTile21 = Tile 
@@ -239,3 +270,4 @@ examplePlayer2 = Player
     roads = [exampleEdge21],
     resourceCards = []
   }
+ -}
