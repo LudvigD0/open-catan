@@ -95,6 +95,9 @@ executable demo-server
         websockets,
         text,
         foobar,
+        aeson ^>=2.2.4.1,
+        bytestring,
+        -- backend -- use this instead of websocket (our) directly.
         -- WebSocket
 
     -- Directories containing source files.
@@ -115,10 +118,13 @@ executable demo-client
         websockets,
         text,
         network,
-        mtl
+        mtl,
+        foobar,
+        aeson ^>=2.2.4.1,
+        bytestring,
     
     -- Directories containing source files.
-    hs-source-dirs:     examples
+    hs-source-dirs:     examples src
 
     -- Base language which the package is written in.
     default-language:   Haskell2010

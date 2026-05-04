@@ -3,10 +3,15 @@ module Main
     ( main
     ) where
 
+import           Data.Aeson
+import           GHC.Generics
+import qualified Data.ByteString.Lazy.Char8 as LC8
+
 import            Control.Concurrent (threadDelay)
 import qualified  Data.Text as T
 import            Network.WebSockets as WS
-import            Foobar -- test import and module
+import            Foobar
+   -- test import and module
 --import            WebSocket  -- our module
 
 -- !!!
@@ -63,10 +68,22 @@ timer = do
   threadDelay (10 * 1000000) -- 10 sekunder
   timer
 
+
+textAsJson :: T.Text -> LC8.ByteString
+textAsJson = LC8.pack . T.unpack
+
+printJsonResult :: Maybe Person -> IO ()
+printJsonResult (Just per) = putStrLn ("greet " ++ (show per))
+printJsonResult Nothing    = putStrLn "nobody was there."
+
+-- identifyJsonType :: Maybe a -> IO()
+
 loop :: Connection -> IO ()
 loop conn = do
   msg <- receiveData conn :: IO T.Text
+  
   putStrLn ("Received: " ++ T.unpack msg)
+  printJsonResult (decode (textAsJson msg) :: Maybe Person)
 
   sendTextData conn ("Echo: " <> msg)
   --timer

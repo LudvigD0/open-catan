@@ -1,7 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
+-- {-# LANGUAGE DeriveAnyClass #-}
+
 module Main 
     ( main
     ) where
+
+import           Data.Aeson
+import           GHC.Generics
+
+import qualified Data.ByteString.Lazy.Char8 as LC8
+import           Foobar
 
 import           Control.Concurrent  (forkIO)
 import           Control.Monad       (forever, unless)
@@ -53,6 +62,10 @@ main = withSocketsDo $
 app_demo :: WS.ClientApp ()
 app_demo conn = do
     putStrLn "Connected!"
+
+    WS.sendTextData conn $ encode (Person {name = "Joe", age = 12})
+    -- WS.sendTextData conn (encode Bishop)
+    -- WS.sendTextData conn (encode [Bishop, Knight])
 
     -- Fork a thread that writes WS data to stdout
     _ <- forkIO $ forever $ do
