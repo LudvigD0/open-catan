@@ -77,3 +77,55 @@ executable backend
 
     -- Base language which the package is written in.
     default-language: Haskell2010
+
+executable demo-server
+    -- Import common warning flags.
+    import:           warnings
+    
+    -- .hs or .lhs file containing the Main module.
+    main-is:          ServerDemo.hs
+    
+    -- Modules included in this executable, other than Main.
+    -- other-modules:
+    --     WebSocket
+
+    -- Other library packages from which modules are imported.
+    build-depends:    
+        base ^>=4.18.3.0,
+        websockets,
+        text,
+        foobar,
+        aeson ^>=2.2.4.1,
+        bytestring,
+        -- backend -- use this instead of websocket (our) directly.
+        -- WebSocket
+
+    -- Directories containing source files.
+    hs-source-dirs:   examples src
+
+    -- Base language which the package is written in.
+    default-language: Haskell2010
+
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+
+executable demo-client
+    -- Import common warning.
+    import:             warnings
+    main-is:            ClientDemo.hs
+    build-depends:
+        base ^>=4.18.3.0,
+        websockets,
+        text,
+        network,
+        mtl,
+        foobar,
+        aeson ^>=2.2.4.1,
+        bytestring,
+    
+    -- Directories containing source files.
+    hs-source-dirs:     examples src
+
+    -- Base language which the package is written in.
+    default-language:   Haskell2010
+
