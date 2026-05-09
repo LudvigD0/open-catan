@@ -90,34 +90,44 @@ autoPlace gs = foldl placePair gs allPlacements
         [ (color, nid, eid)
         | (color, pairs) <- beginnerPlacements, (nid, eid) <- pairs]
 
+--placePair :: GameState -> (Color, NodeId, EdgeId) -> GameState
+--placePair state (color, nid, eid) =
+--    let pid        = playerId . snd . head $ filter ((== color) . fst) (players state)
+--        newBoard   = placeRoad eid pid $ placeSettlement nid pid (board state)
+--        newPlayers = addRoad color eid $ addSettlement color nid (players state)
+--    in  state { board = newBoard, players = newPlayers }
+
+--Viktor, här har jag ändrat placePair lite för att kunna köra cabal.build
+--Om du anser att det är fel är det bara att ta tillbaka det jag har 
+--kommenterat ut.
+
 placePair :: GameState -> (Color, NodeId, EdgeId) -> GameState
 placePair state (color, nid, eid) =
-    let pid        = playerId . snd . head $ filter ((== color) . fst) (players state)
-        newBoard   = placeRoad eid pid $ placeSettlement nid pid (board state)
-        newPlayers = addRoad color eid $ addSettlement color nid (players state)
-    in  state { board = newBoard, players = newPlayers }
+    let pid      = playerId . snd . head $ filter ((== color) . fst) (players state)
+        newBoard = placeRoad eid pid $ placeSettlement nid pid (board state)
+    in  state { board = newBoard }
 
-updatePlayer :: Color -> NodeId -> EdgeId -> [(Color, Player)] -> [(Color, Player)]
-updatePlayer color nid eid = map update
+updatePlayer :: Color -> Node -> Edge -> [(Color, Player)] -> [(Color, Player)] --Innan stod det NodeId som andra parameter och som skickades till buildings
+updatePlayer color node edge = map update
   where
     update (c, p)
-        | c == color = (c, p { buildings = nid : buildings p
-                              , roads     = eid : roads p
+        | c == color = (c, p { buildings = node : buildings p
+                              , roads     = edge : roads p
                               })
         | otherwise  = (c, p)
 
-addSettlement :: Color -> NodeId -> [(Color, Player)] -> [(Color, Player)]
-addSettlement color nid = map update
+addSettlement :: Color -> Node -> [(Color, Player)] -> [(Color, Player)]  --Innan stod det NodeId som andra parameter men nu Node
+addSettlement color node = map update
   where
     update (c, p)
-        | c == color = (c, p { buildings = nid : buildings p })
+        | c == color = (c, p { buildings = node : buildings p })
         | otherwise  = (c, p)
 
-addRoad :: Color -> EdgeId -> [(Color, Player)] -> [(Color, Player)]
-addRoad color eid = map update
+addRoad :: Color -> Edge -> [(Color, Player)] -> [(Color, Player)]  --Innan stod det EdgeId som andra parameter men nu Edge
+addRoad color edge = map update
   where
     update (c, p)
-        | c == color = (c, p { roads = eid : roads p })
+        | c == color = (c, p { roads = edge : roads p })
         | otherwise  = (c, p)
 
 placeSettlement :: NodeId -> PlayerId -> Board -> Board
@@ -153,13 +163,13 @@ nextTurn Trade = Roll
 -- 1. game loop and rules
 
 gameLoop :: GameState -> IO ()
-gameLoop = do
+gameLoop gs = do  --lagt till gs här (GameState) och retunerar det nu där nere för att inte få error
     (d1, d2) <- diceResult
-    givePlayersResources (d1 + d2)
+    --givePlayersResources (d1 + d2)        TEMPORÄRT KOMMENTERAD BORT FÖR ATT KOMPILERA SPELET
     -- Place buildings with some updaters using Player input
     -- check VP
     -- update GameState
-    gameLoop undefined
+    gameLoop gs
 
 diceResult :: IO (Int, Int)
 diceResult = do dice1 <- randomRIO (1, 6)

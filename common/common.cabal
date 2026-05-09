@@ -58,8 +58,10 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules:  Game.Types
-                      Game.Rules
+    exposed-modules:  Catan
+                      Coordinates
+                      Types
+                      Util
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -68,7 +70,12 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.18.3.0
+    build-depends:    base ^>=4.18.3.0,
+                      containers,
+                      uuid,
+                      random,
+                      extra,
+                      text
 
     -- Directories containing source files.
     hs-source-dirs:   lib
