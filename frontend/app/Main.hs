@@ -19,6 +19,10 @@ import qualified Miso.Svg.Property as SP
 import qualified Miso.CSS as CSS
 import           Miso.String (ms)
 import           Data.List (intercalate)
+import           Coordinates
+import           Types
+import           Catan
+
 
 {- import qualified Miso.Html.Element as H
  -}

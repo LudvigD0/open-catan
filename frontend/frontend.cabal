@@ -84,7 +84,8 @@ executable frontend
     -- Other library packages from which modules are imported.
     build-depends:    base >=4.18 && <5,
                       miso,
-                      text
+                      text,
+                      common
 
     -- Directories containing source files.
     hs-source-dirs:   app
