@@ -1,7 +1,7 @@
 module Util where 
 
 import System.Random
-import Data.UUID
+import Data.UUID.Types
 
 someUUIDs :: [UUID]
 someUUIDs =

@@ -75,10 +75,7 @@ executable backend
         random,
         uuid
     other-modules:
-        Types
         Util
-        Coordinates
-        Catan
 
     -- Directories containing source files.
     hs-source-dirs:   src

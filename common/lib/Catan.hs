@@ -1,7 +1,7 @@
 module Catan where 
 import Types
-import Util
-import Data.UUID
+--import Util ()
+import Data.UUID.Types
 import Coordinates
 import qualified Data.Map as Map 
 import System.Random
@@ -10,6 +10,7 @@ import Data.List (nub)
 import Data.Map (elems, fromList, keys)
 import Data.Foldable (concat)
 import GHC.Base (undefined)
+
 
 {-- 
 
@@ -34,17 +35,17 @@ s--}
 -- 1. Game state and Initializing board 
 
 -- Main function for SINGLE game instance 
-main :: IO GameState
-main = do
-    gs <- initGameState
-    let gs' = autoPlace gs 
-    return gs'
+--main :: IO GameState
+--main = do
+--    gs <- initGameState
+--    let gs' = autoPlace gs 
+--    return gs'
 
     
 
-initGameState :: IO GameState
-initGameState = do
-    let newPlayers                = map initPlayer someUUIDs    -- from Util
+initGameState :: [UUID] -> IO GameState
+initGameState ids = do
+    let newPlayers                = map initPlayer ids    -- from Util
     return GameState
         { gameId      = 0
         , board       = catanBoard

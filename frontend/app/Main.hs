@@ -17,6 +17,10 @@ import           Miso.Lens
 import qualified Miso.Svg.Element as S
 import qualified Miso.Svg.Property as SP
 import qualified Miso.CSS as CSS
+import qualified Miso.Html.Element as H
+import qualified Miso.Html.Property as HP
+--import qualified Miso.Html.Style as CSS
+---
 import           Miso.String (ms)
 import           Data.List (intercalate)
 import           Coordinates
@@ -58,20 +62,26 @@ updateModel NoOp = pure ()
 
 
 --------------------------- helpers
-data Hex = Hex Int Int Int
-  deriving (Show, Eq, Ord)
+--data Hex = Hex Int Int Int
+--  deriving (Show, Eq, Ord)
 
-boardHexes :: [Hex]
+-- Board hexes ska antagligen bort eftersom att vi redan skapar board i Cordinates
+boardHexes :: [Cord] 
 boardHexes = -- skapar 19 hex
-  [ Hex q r s
+  [ Cord q r s
   | q <- [-2..2]
   , r <- [-2..2]
   , s <- [-2..2]
   , q + r + s == 0
   ]
 
-hexToPixel :: Double -> Hex -> (Double, Double) -- beräkna mittpunkten
-hexToPixel size (Hex q r _s) =
+
+
+
+
+
+hexToPixel :: Double -> Cord -> (Double, Double) -- beräkna  i
+hexToPixel size (Cord q r _s) =
   let q' = fromIntegral q
       r' = fromIntegral r
       x = size * sqrt 3 * (q' + r' / 2)
@@ -92,7 +102,7 @@ pointsText points =
     | (x, y) <- points
     ]
 
-viewHex :: Hex -> View () Action
+viewHex :: Cord -> View () Action
 viewHex hex =
   let center = hexToPixel 60 hex --beräkna mittpunkt
       points = hexCorners 60 center -- skicka mittpunkten för att beräkna alla 6 kordinater
@@ -125,30 +135,20 @@ viewModel _ =
         ]
       ]
       (map viewHex boardHexes)
+      ,
+      viewImage
+    ]
+    
+----------------
+ 
+viewImage :: View () Action
+viewImage =
+  H.img_
+    [ HP.src_ "/public/assets/brick.png"
+    , HP.alt_ "Brick image"
+    , HP.width_ "100"
+    , HP.height_ "100"
     ]
 
 
-
-     {-  [ S.polygon_
-        [ SP.points_ "250,100 380,175 380,325 250,400 120,325 120,175"
-        , CSS.style_
-          [ CSS.fill "#d9a066"
-          , CSS.stroke "black"
-          , CSS.strokeWidth "4"
-          ]
-        ]
-      ] -}
-
-{- 
-viewModel :: Int -> View Int Action
-viewModel x =
-  H.div_
-    [ P.className "counter"
-    ]
-    [ H.button_ [ H.onClick AddOne ] [ text "+" ]
-    , text (ms x)
-    , H.button_ [ H.onClick SubtractOne ] [ text "-" ]
-    , H.br_ []
-    , H.button_ [ H.onClick SayHelloWorld ] [ text "Alert Hello World!" ]
-    ] -}
 ----------------------------------------------------------------------------
