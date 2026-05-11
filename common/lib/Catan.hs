@@ -5,11 +5,11 @@ import Data.UUID
 import Coordinates
 import qualified Data.Map as Map 
 import System.Random
-import Data.Maybe (mapMaybe, isJust)
+import Data.Maybe (mapMaybe, isJust, Maybe (Nothing))
 import Data.List (nub)
 import Data.Map (elems, fromList, keys)
 import Data.Foldable (concat)
-import GHC.Base (undefined)
+import GHC.Base (undefined, build)
 
 {-- 
 
@@ -52,6 +52,8 @@ initGameState = do
         , currentTurn = 0
         , phase       = Roll
         , dice        = (0, 0)
+        , specialKnight = (head newPlayers, 0)
+        , specialRoad = (head newPlayers, 0)
         }
 
 initPlayer :: UUID -> Player
@@ -176,6 +178,30 @@ diceResult = do dice1 <- randomRIO (1, 6)
                 dice2 <- randomRIO (1, 6)
                 return (dice1, dice2)
 
+calcVictoryPoints :: Player -> GameState -> Int
+calcVictoryPoints p gs = calcBuildingPoints p 
+                       + calcVictoryCards p
+                       + calcSpecialCards p gs
+
+calcBuildingPoints :: Player -> Int
+calcBuildingPoints = sum . map buildingPoints . buildings
+
+calcVictoryCards :: Player -> Int
+calcVictoryCards = victoryCards
+
+calcSpecialCards :: Player -> GameState -> Int
+calcSpecialCards gs p = (if checkLargestArmy gs p then 2 else 0) 
+                      + (if checkLongestRoad gs p then 2 else 0) 
+
+buildingPoints :: Building -> Int
+buildingPoints (Settlement _) = 1
+buildingPoints (City _) = 2
+
+checkLargestArmy :: GameState -> Player -> Bool
+checkLargestArmy gs = fst specialKnight gs == playerId
+
+checkLongestRoad :: GameState -> Player -> Bool
+checkLongestRoad gs = fst specialRoad gs == playerId
 
 
 

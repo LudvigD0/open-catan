@@ -23,7 +23,7 @@ newtype PlayerId = PlayerId UUID deriving (Show, Eq)
 
 data Player = Player
   { playerId :: PlayerId,
-    points :: Int,
+    victoryCards :: Int,
     buildings :: [Node],
     roads :: [Edge]
   } deriving Show
@@ -48,7 +48,11 @@ data GameState = GameState
   , currentTurn :: Int              -- Index of player  
   , phase       :: TurnPhase       
   , dice        :: (Int, Int)
+  , specialKnight :: (PlayerId, Int)
+  , specialRoad :: (PlayerId, Int)
   }
+
+data SpacialCard = LargestArmy (PlayerId, Int) | LongestRoad (PlayerId, Int) deriving Show
 
 data TurnPhase = Roll | Build | Trade deriving (Show, Eq)
 
@@ -78,7 +82,6 @@ data Node = Node
   , nodeEdges :: [Edge]
   , nodeTiles :: [Int]    -- stores tileId instead of Tile to break cyclical referensing
   } deriving Show
-
 
 {-
 data Tile = Tile
