@@ -99,7 +99,7 @@ executable demo-server
         websockets,
         text,
         foobar,
-        aeson ^>=2.2.4.1,
+        aeson ^>=2.2.3.0,
         bytestring,
         -- backend -- use this instead of websocket (our) directly.
         -- WebSocket
@@ -124,7 +124,7 @@ executable demo-client
         network,
         mtl,
         foobar,
-        aeson ^>=2.2.4.1,
+        aeson ^>=2.2.3.0,
         bytestring,
     
     -- Directories containing source files.
