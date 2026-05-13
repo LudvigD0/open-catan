@@ -73,12 +73,8 @@ executable backend
         text,
         containers,   
         random,
-        uuid
-    other-modules:
-        Types
-        Util
-        Coordinates
-        Catan
+        uuid,
+        common
 
     -- Directories containing source files.
     hs-source-dirs:   src

@@ -14,7 +14,7 @@ data Board = Board {tiles :: Map Cord Tile}
 
 -- Catan types 
 data Color    = Red | Blue | Orange | White deriving (Show, Eq)
-data Resource = Lumber | Ore | Grain | Brick | Wool deriving (Show, Eq)
+data Resource = Lumber | Ore | Grain | Brick | Wool deriving (Show, Eq, Ord)
 data Road     = Road PlayerId deriving (Show, Eq)
 data Building = Settlement PlayerId | City PlayerId deriving (Show, Eq)
 
@@ -22,18 +22,12 @@ data Building = Settlement PlayerId | City PlayerId deriving (Show, Eq)
 newtype PlayerId = PlayerId UUID deriving (Show, Eq)
 
 data Player = Player
-  { playerId :: PlayerId,
-    points :: Int,
-    buildings :: [Node],
-    roads :: [Edge]
+  { playerId  :: PlayerId
+  , points    :: Int
+  , buildings :: [Node]
+  , roads     :: [Edge]
+  , resources :: Map Resource Int 
   } deriving Show
-
-{- data Player = Player
-  { playerId  :: PlayerId,
-    points    ::  Int,
-    buildings :: [NodeId],
-    roads     :: [EdgeId]
-  } deriving Show -}
 
 -- Game 
 
@@ -53,9 +47,9 @@ data GameState = GameState
 data TurnPhase = Roll | Build | Trade deriving (Show, Eq)
 
 -- Graph Structure
-newtype TileId = TileId Int deriving (Show, Eq)
-newtype EdgeId = EdgeId Int deriving (Show, Eq)
-newtype NodeId = NodeId Int deriving (Show, Eq)
+newtype TileId = TileId Int deriving (Show, Eq, Ord)
+newtype EdgeId = EdgeId Int deriving (Show, Eq, Ord)
+newtype NodeId = NodeId Int deriving (Show, Eq, Ord)
 
 data Tile = Tile
   { tileId   :: Int
