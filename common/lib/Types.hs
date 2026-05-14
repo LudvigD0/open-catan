@@ -1,6 +1,6 @@
 module Types where 
 import Data.Map (Map, fromList, toList, elems)
-import Data.UUID
+import Data.UUID.Types
 import Data.Word
 import Data.List (nub)
 import Data.Tuple.Extra (both)

@@ -1,7 +1,7 @@
 module Catan where 
 import Types
-import Util
-import Data.UUID
+--import Util ()
+import Data.UUID.Types
 import Coordinates
 import qualified Data.Map as Map 
 import System.Random
@@ -10,6 +10,7 @@ import Data.List (nub)
 import Data.Map (elems, fromList, keys)
 import Data.Foldable (concat)
 import GHC.Base (undefined)
+
 
 {-- 
 
