@@ -26,6 +26,7 @@
               pkgs.cabal-install
               pkgs.pkg-config
               pkgs.zlib
+              pkgs.haskellPackages.aeson
             ];
 
             shellHook = ''
