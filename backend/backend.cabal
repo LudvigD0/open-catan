@@ -74,7 +74,11 @@ executable backend
         containers,   
         random,
         uuid,
+        uuid-types,
         common
+    other-modules:
+        BuildPhase,
+        Util
 
     -- Directories containing source files.
     hs-source-dirs:   src

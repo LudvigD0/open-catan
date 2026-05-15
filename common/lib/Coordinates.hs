@@ -1,12 +1,15 @@
 module Coordinates where
-import Types
+
+-- Libs
 import qualified Data.Map as Map 
+
+-- Local
+import Types
 
 {- 
 !!! Important !!!
 Edges edgeNodes pair contain stub nodes meaning that edge → node → edges is not possible 
 and the loopUpTable "nodeEdgeMap" needs to be used with the nodeId for tranversal 
-
 -}
 
 -- Every valid hex satisfies q + r + s = 0

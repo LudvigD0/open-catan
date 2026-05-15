@@ -58,8 +58,7 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules:  Catan
-                      Coordinates
+    exposed-modules:  Coordinates
                       Types
 
     -- Modules included in this library but not exported.
