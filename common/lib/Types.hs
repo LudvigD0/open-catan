@@ -7,10 +7,14 @@ import Data.Tuple.Extra (both)
 
 -- Board 
 data Cord = Cord Int Int Int deriving (Show, Eq, Ord)
-data Board = Board {tiles :: Map Cord Tile}
+data Board = Board
+  { tiles :: Map Cord Tile
+  , nodes :: Map NodeId Node
+  , edges :: Map EdgeId Edge
+  }
 
 -- Catan types 
-data Color    = Red | Blue | Orange | White deriving (Show, Eq)
+data Color    = Red | Blue | Orange | White deriving (Show, Eq, Ord)
 data Resource = Lumber | Ore | Grain | Brick | Wool deriving (Show, Eq, Ord)
 data Road     = Road PlayerId deriving (Show, Eq)
 data Building = Settlement PlayerId | City PlayerId deriving (Show, Eq)
@@ -21,8 +25,8 @@ newtype PlayerId = PlayerId UUID deriving (Show, Eq)
 data Player = Player
   { playerId  :: PlayerId
   , points    :: Int
-  , buildings :: [Node]
-  , roads     :: [Edge]
+  , buildings :: [NodeId]
+  , roads     :: [EdgeId]
   , resources :: Map Resource Int 
   } deriving Show
 
@@ -34,8 +38,8 @@ data ServerState = ServerState
 data GameState = GameState
   { gameId      :: Int
   , board       :: Board
-  , players     :: [(Color, Player)]
-  , currentTurn :: Int              -- Index of player  
+  , players     :: Map Color Player
+  , currentTurn :: Color              -- Index of player  
   , dice        :: (Int, Int)
   }
 
@@ -45,26 +49,26 @@ newtype EdgeId = EdgeId Int deriving (Show, Eq, Ord)
 newtype NodeId = NodeId Int deriving (Show, Eq, Ord)
 
 data Tile = Tile
-  { tileId   :: Int
+  { tileId   :: TileId
   , resource :: Maybe Resource
   , token    :: Int
   , robber   :: Bool
-  , nodes    :: [Node]
-  , edges    :: [Edge]
+  , tileNodes :: [NodeId]
+  , tileEdges :: [EdgeId]
   } deriving Show
 
 data Edge = Edge
-  { edgeId  :: EdgeId
-  , road    :: Maybe Road
-  , edgeNodes :: (Node, Node)
-  } deriving Show
+  { edgeId    :: EdgeId
+  , road      :: Maybe Road
+  , edgeNodes :: (NodeId, NodeId)
+  }
 
 data Node = Node
   { nodeId    :: NodeId
   , building  :: Maybe Building
-  , nodeEdges :: [Edge]
-  , nodeTiles :: [Int]    -- stores tileId instead of Tile to break cyclical referensing
-  } deriving Show
+  , nodeEdges :: [EdgeId]
+  , nodeTiles :: [TileId]
+  }
 
 {-
 instance Show Board where

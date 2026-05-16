@@ -12,7 +12,7 @@ import Util
 
 -- Uses playerInput to place a new settlement, checks res in buildPhase
 -- Adds the settlement to board, player, and removes req resources
-placeSettlementIO :: GameState -> Color -> IO GameState
+{- placeSettlementIO :: GameState -> Color -> IO GameState
 placeSettlementIO gs color = do
     putStr "Enter NodeId to place settlement (0 for exit): "
     hFlush stdout
@@ -65,7 +65,7 @@ placeCityIO gs color = do
     let nid = NodeId (read input)
         pid = playerId $ getPlayer color gs
         newBoard = placeCity nid pid (board gs)
-    return gs { board = newBoard }
+    return gs { board = newBoard } -}
 
 
 ------------------------------ Resource Checking ----------------------------------------
@@ -74,7 +74,7 @@ placeCityIO gs color = do
 checkSettlementRes :: GameState -> Color -> Bool
 checkSettlementRes gs color = all (>= 1) [nLumber, nGrain, nBrick, nWool]
   where
-    res     = resources . snd . head $ filter ((== color) . fst) (players gs)
+    res     = resources $ getPlayer color gs 
     nLumber = res Map.! Lumber
     nGrain  = res Map.! Grain
     nBrick  = res Map.! Brick
@@ -84,7 +84,7 @@ checkSettlementRes gs color = all (>= 1) [nLumber, nGrain, nBrick, nWool]
 checkRoadRes :: GameState -> Color -> Bool
 checkRoadRes gs color = all (>= 1) [nLumber, nBrick]
   where
-    res     = resources . snd . head $ filter ((== color) . fst) (players gs)
+    res     = resources $ getPlayer color gs
     nLumber = res Map.! Lumber
     nBrick  = res Map.! Brick
 
@@ -92,119 +92,122 @@ checkRoadRes gs color = all (>= 1) [nLumber, nBrick]
 checkCityRes :: GameState -> Color -> Bool
 checkCityRes gs color = nOre >= 3 && nGrain >= 2
   where
-    res    = resources . snd . head $ filter ((== color) . fst) (players gs)
+    res     = resources $ getPlayer color gs
     nOre   = res Map.! Ore
     nGrain = res Map.! Grain
 
 ------------------------------ Board State ----------------------------------------
 
--- Adds new settlement to the board given a nodeId and playerId
+-- Updates a board node with a new settlement belonging to playerid
 placeSettlement :: NodeId -> PlayerId -> Board -> Board
-placeSettlement nid pid (Board tileMap) = Board $ Map.map updateTile tileMap
+placeSettlement nid pid brd =
+    brd { nodes = Map.adjust updateNode nid (nodes brd) }
   where
-    updateTile tile = tile { nodes = map updateNode (nodes tile) }
-    updateNode n
-        | nodeId n == nid = n { building = Just (Settlement pid) }
-        | otherwise       = n
+    updateNode n = n { building = Just (Settlement pid) }
 
--- Adds new city to the board given a nodeId and playerId
+-- Updates a board node with a new city belonging to playerid
 placeCity :: NodeId -> PlayerId -> Board -> Board
-placeCity nid pid (Board tileMap) = Board $ Map.map updateTile tileMap
+placeCity nid pid brd =
+    brd { nodes = Map.adjust updateNode nid (nodes brd) }
   where
-    updateTile tile = tile { nodes = map updateNode (nodes tile) }
-    updateNode n
-        | nodeId n == nid = n { building = Just (City pid) }
-        | otherwise       = n
+    updateNode n = n { building = Just (City pid) }
 
--- Adds new road to the board given a edgeId and playerId
+-- Updates a board edge with a new road belonging to playerid
 placeRoad :: EdgeId -> PlayerId -> Board -> Board
-placeRoad eid pid (Board tileMap) = Board $ Map.map updateTile tileMap
+placeRoad eid pid brd =
+    brd { edges = Map.adjust updateEdge eid (edges brd) }
   where
-    updateTile tile = tile { edges = map updateEdge (edges tile) }
-    updateEdge e
-        | edgeId e == eid = e { road = Just (Road pid) }
-        | otherwise       = e
+    updateEdge e = e { road = Just (Road pid) }
 
 ------------------------------ Player State ----------------------------------------
 
--- Add the city to the player and removes resources
-addCity :: Color -> Node -> [(Color, Player)] -> [(Color, Player)]
-addCity color node = map update
+-- Does not add duplicate nodeId since player needs to have settlement
+-- to build city. Deducts resources for city 
+addCity :: Color -> Map.Map Color Player -> Map.Map Color Player
+addCity color = Map.adjust updatePlayer color
   where
-    update (c, p)
-        | c == color = (c, p { buildings = node : buildings p
-                              , resources = updateRes (resources p) })
-        | otherwise  = (c, p)
-    updateRes resM = Map.mapWithKey deduct resM
-    deduct res i
-        | res == Grain = i - 2
-        | res == Ore   = i - 3
-        | otherwise    = i
+    updatePlayer p =
+        p { resources = updateResources (resources p) }
 
+    updateResources =
+        Map.mapWithKey deduct
 
--- Adds the settlement to the player, and remove the required resources 
-addSettlement :: Color -> Node -> [(Color, Player)] -> [(Color, Player)]
-addSettlement color node = map update
+    deduct res amount
+        | res == Grain = amount - 2
+        | res == Ore   = amount - 3
+        | otherwise    = amount
+
+-- Adds nodeId to players buildings and deducts resources for settlement 
+addSettlement :: Color -> NodeId -> Map.Map Color Player -> Map.Map Color Player
+addSettlement color nid plyrs =
+    Map.adjust updatePlayer color plyrs
   where
-    update (c, p)
-        | c == color = (c, p { buildings = node : buildings p
-                              , resources = updateRes (resources p) })
-        | otherwise  = (c, p)
+    updatePlayer p =
+        p
+          { buildings = nid : buildings p
+          , resources = updateRes (resources p)
+          }
+
     updateRes resM = Map.mapWithKey deduct resM
     deduct res i
         | res `elem` [Lumber, Grain, Brick, Wool] = i - 1
         | otherwise                               = i
 
--- Adds the road to the player, and remove the required resources 
-addRoad :: Color -> Edge -> [(Color, Player)] -> [(Color, Player)]  
-addRoad color edge = map update
+-- Adds edgeId to players roads, deducts resources for road
+addRoad :: Color -> EdgeId -> Map.Map Color Player -> Map.Map Color Player
+addRoad color eid plyrs =
+    Map.adjust updatePlayer color plyrs
   where
-    update (c, p)
-        | c == color = (c, p { roads = edge : roads p
-                             , resources = updateRes (resources p) })
-        | otherwise  = (c, p)
+    updatePlayer p =
+        p
+          { roads = eid : roads p
+          , resources = updateRes (resources p)
+          }
+
     updateRes resM = Map.mapWithKey deduct resM
     deduct res i
         | res `elem` [Lumber, Brick] = i - 1
-        | otherwise                  = i
+        | otherwise                               = i
+    
+-- Does not remove resources
+addSettlementForced :: Color -> NodeId -> Map.Map Color Player -> Map.Map Color Player
+addSettlementForced color nid plyrs =
+    Map.adjust updatePlayer color plyrs
+  where
+    updatePlayer p = p { buildings = nid : buildings p }
 
 -- Does not remove resources
-addSettlementForced :: Color -> Node -> [(Color, Player)] -> [(Color, Player)]
-addSettlementForced color node = map update
+addRoadForced :: Color -> EdgeId -> Map.Map Color Player -> Map.Map Color Player
+addRoadForced color eid plyrs =
+    Map.adjust updatePlayer color plyrs
   where
-    update (c, p)
-        | c == color = (c, p { buildings = node : buildings p })
-        | otherwise  = (c, p)
-
--- Does not remove resources
-addRoadForced :: Color -> Edge -> [(Color, Player)] -> [(Color, Player)]  
-addRoadForced color edge = map update
-  where
-    update (c, p)
-        | c == color = (c, p { roads = edge : roads p })
-        | otherwise  = (c, p)
+    updatePlayer p = p { roads = eid : roads p }  
 
 ------------------------------ Validity Checks ----------------------------------------
 
 -- Checks if player has settlement on node
-validCityPlacement :: Node -> PlayerId -> Board -> Bool 
-validCityPlacement node pid1 board = hasBuilding
+validCityPlacement :: NodeId -> PlayerId -> Board -> Bool 
+validCityPlacement nid pid brd | isNothing node = False 
+                               | otherwise = case building (fromJust node) of 
+                                            Just (Settlement nodepid) -> pid == nodepid
+                                            _                         -> False 
  where 
-    hasBuilding = case building node of 
-        Just (Settlement pid2) -> pid1 == pid2
-        _                 -> False
+    node = lookupNode nid brd
 
--- Check if node is empty, no adjacent settlements within 1 road 
--- And player has at least one road leading to the node
-validStlmPlacement :: Node -> PlayerId -> Board -> Bool
-validStlmPlacement node pid board =
-    isNothing (building node) &&                              
-    all (isNothing . building) (adjacentNodes node board) &&  
-    hasConnectingRoad node pid                                
+-- Checks if node is empty, checks all adjacent nodes within radius 1 
+-- Checks for min 1 road connected to node
+validStlmPlacement :: NodeId -> PlayerId -> Board -> Bool
+validStlmPlacement nid pid brd | isNothing node = False
+                               | otherwise = isNothing (building (fromJust node)) &&                              
+                                all (isNothing . building) (adjacentNodes (fromJust node) brd) &&  
+                                hasConnectingRoad (fromJust node) pid brd 
+ where 
+    node = lookupNode nid brd
 
-hasConnectingRoad :: Node -> PlayerId -> Bool
-hasConnectingRoad node pid = any isOwnRoad (nodeEdges node)  
+-- Checks if player has a road connected to node 
+hasConnectingRoad :: Node -> PlayerId -> Board -> Bool
+hasConnectingRoad node pid brd = any isOwnRoad (nodeEdges node)  
   where
-    isOwnRoad edge = case road edge of
+    isOwnRoad eid = case road (fromJust $ lookupEdge eid brd) of
         Just (Road ownerId) -> ownerId == pid
         Nothing             -> False

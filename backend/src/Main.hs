@@ -6,7 +6,7 @@ import qualified Data.Map as Map
 import Control.Monad
 import System.Random
 import Data.Maybe 
-import Data.List (intercalate, sortOn)
+import Data.List (intercalate, sortOn, elemIndex)
 import BuildPhase
 import Data.UUID
 
@@ -26,7 +26,7 @@ main = do
 gameLoop :: GameState -> IO ()
 gameLoop gs = do
     printBoard (board gs)
-    let (color, _) = players gs !! currentTurn gs
+    let color = currentTurn gs
     putStrLn $ "\n====== " ++ show color ++ "'s turn ======"
 
     -- Roll dice
@@ -49,20 +49,27 @@ gameLoop gs = do
         Just winner -> putStrLn $ "\n🎉 " ++ show winner ++ " wins!"
         Nothing     -> do
             -- Step 9: Next player
-            let nPlayers  = length (players gs3)
-                nextTurnIdx = (currentTurn gs3 + 1) `mod` nPlayers
-                gs4 = gs3 { currentTurn = nextTurnIdx }
+            let gs4 = gs3 { currentTurn = nextPlayer (currentTurn gs3) (players gs3) }
             gameLoop gs4
 
+nextPlayer :: Color -> Map.Map Color Player -> Color
+nextPlayer current ps =
+    let keys        = Map.keys ps  
+        currentIdx  = fromJust $ elemIndex current keys
+        nextIdx     = (currentIdx + 1) `mod` length keys
+    in  keys !! nextIdx
+    
 ------------------------------------------------ Initaialization ------------------------------------------------------------------------------
 initGameState :: IO GameState
 initGameState = do
+    start <- randomRIO (1, 4)
     let newPlayers                = map initPlayer someUUIDs    -- from Util
+        colors = [Red, Blue, Orange, White]
     return GameState
         { gameId      = 0
         , board       = catanBoard
-        , players     = zip [Red, Blue, Orange, White] newPlayers
-        , currentTurn = 0
+        , players     = Map.fromList $ zip colors newPlayers
+        , currentTurn = colors !! start 
         , dice        = (0, 0)
         }
 
@@ -107,10 +114,9 @@ autoPlace gs = foldl placePair gs allPlacements
 -- Adds a settlement and road at the same time 
 placePair :: GameState -> (Color, NodeId, EdgeId) -> GameState
 placePair gs (color, nid, eid) =
-    let pid        = playerId . snd . head $ filter ((== color) . fst) (players gs)
+    let pid        = playerId $ (players gs) Map.! (currentTurn gs) 
         newBoard   = placeRoad eid pid $ placeSettlement nid pid (board gs)
-        newPlayers = addRoadForced color (fromJust $ lookupEdge eid (board gs)) 
-                    $ addSettlementForced color (fromJust $ lookupNode nid (board gs)) (players gs)
+        newPlayers = addRoadForced color eid $ addSettlementForced color nid (players gs)
     in  gs { board = newBoard, players = newPlayers }
 
 ------------------------------------------------VP Check------------------------------------------------------------------------------
@@ -120,24 +126,23 @@ placePair gs (color, nid, eid) =
 -- Calculates sum of points from only settlements and cities
 -- TODO: Add Longest Road and largest army 
 countVP :: Player -> Board -> Int
-countVP p (Board tileMap) =
-    sum [ vpFor b
-        | tile <- Map.elems tileMap
-        , node <- nodes tile
-        , Just b <- [building node]
-        , ownsBuilding (playerId p) b
-        ]
+countVP p board =
+    sum $ map vpFor buildingsOwned
   where
-    vpFor (Settlement _) = 1
-    vpFor (City _)       = 2
-    ownsBuilding pid1 (Settlement pid2) = pid1 == pid2
-    ownsBuilding pid1 (City pid2)       = pid1 == pid2
+    buildingsOwned =
+        mapMaybe (`Map.lookup` nodes board) (buildings p)
+
+    vpFor node =
+        case building node of
+            Just (Settlement _) -> 1
+            Just (City _)       -> 2
+            _                   -> 0
 
 -- Goes through the current GameState, if a winner is found the other players are ignored 
 -- Returns the color of the winning player 
 checkWinner :: GameState -> Maybe Color
 checkWinner gs =
-    foldl check Nothing (players gs)
+    foldl check Nothing (Map.toList $ players gs)
   where
     check (Just winner) _      = Just winner
     check Nothing (color, p)
@@ -153,7 +158,7 @@ printResources p = do
     printRes (res, n) = putStrLn $ "  " ++ show res ++ ": " ++ show n
 
 printBoard :: Board -> IO ()
-printBoard (Board tileMap) = do
+printBoard (Board tileMap _ _) = do
     putStrLn "\n--- Board State ---"
     mapM_ printTile (Map.elems tileMap)
   where
@@ -167,7 +172,7 @@ printBoard (Board tileMap) = do
 -- TODO: Check for valid placement, ex. roads connected to settlement, no house within 2 edges
 buildPhase :: GameState -> Color -> IO GameState
 buildPhase gs color = do
-    let (_, player) = head $ filter ((== color) . fst) (players gs)
+    let player = getPlayer color gs 
     printResources player
     putStrLn "\nBuild phase — choose an action:"
     when (checkSettlementRes gs color) $ putStrLn "  1. Place Settlement"
@@ -178,9 +183,9 @@ buildPhase gs color = do
     hFlush stdout
     choice <- getLine
     case choice of
-        "1" | checkSettlementRes gs color -> placeSettlementIO gs color
-        "2" | checkRoadRes gs color       -> placeRoadIO gs color
-        "3" | checkCityRes gs color       -> placeCityIO gs color
+        "1" | checkSettlementRes gs color -> return gs -- placeSettlementIO gs color
+        "2" | checkRoadRes gs color       -> return gs --placeRoadIO gs color
+        "3" | checkCityRes gs color       -> return gs --placeCityIO gs color
         "4"                               -> return gs
         _   -> do
             putStrLn "Invalid choice or insufficient resources."
@@ -196,7 +201,7 @@ rollDice = do
 
 -- Find all tiles that match the dice roll token
 matchingTiles :: Int -> Board -> [Tile]
-matchingTiles roll (Board tileMap) =
+matchingTiles roll (Board tileMap _ _) =
     [ tile | tile <- Map.elems tileMap,
       token tile == roll,
       not (robber tile),
@@ -204,25 +209,27 @@ matchingTiles roll (Board tileMap) =
 
 -- Given a tile, find which players have settlements/cities on it
 -- and what resource they should receive
-tileYield :: Tile -> [(PlayerId, Resource, Int)]
-tileYield tile = case resource tile of
-    Nothing  -> []
-    Just res ->
-        [ (pid, res, amount)
-        | node <- nodes tile
-        , isJust (building node)
-        , let b            = fromJust (building node)
-              (pid, amount) = case b of
-                  Settlement p -> (p, 1)
-                  City p       -> (p, 2)
-        ]
+tileYield :: Tile -> Board -> [(PlayerId, Resource, Int)]
+tileYield tile brd =
+    case resource tile of
+        Nothing  -> []
+        Just res -> concatMap yieldFromNode (tileNodes tile)
+          where
+            yieldFromNode nid =
+                case Map.lookup nid (nodes brd) of
+                    Nothing   -> []
+                    Just node ->
+                        case building node of
+                            Just (Settlement pid) -> [(pid, res, 1)]
+                            Just (City pid)       -> [(pid, res, 2)]
+                            Nothing               -> []
 
 -- Distribute resources to all players based on dice roll
-distributeResources :: Int -> Board -> [(Color, Player)] -> [(Color, Player)]
-distributeResources roll brd ps =
-    foldl applyYield ps yields
+distributeResources :: Int -> Board -> Map.Map Color Player -> Map.Map Color Player
+distributeResources roll brd ps = Map.fromList $ 
+    foldl applyYield (Map.toList ps) yields
   where
-    yields = concatMap tileYield (matchingTiles roll brd)
+    yields = concatMap (`tileYield` brd) (matchingTiles roll brd)
 
     applyYield plrs (pid, res, amount) = map (giveResource pid res amount) plrs
 

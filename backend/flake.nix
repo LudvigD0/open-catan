@@ -27,6 +27,9 @@
               pkgs.pkg-config
               pkgs.zlib
               pkgs.haskellPackages.aeson
+              pkgs.haskellPackages.servant
+              pkgs.haskellPackages.either
+              pkgs.haskellPackages.warp
             ];
 
             shellHook = ''

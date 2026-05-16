@@ -1,15 +1,15 @@
 module Coordinates where
 
 -- Libs
-import qualified Data.Map as Map 
+import qualified Data.Map as Map
 
 -- Local
 import Types
 
-{- 
+{-
 !!! Important !!!
-Edges edgeNodes pair contain stub nodes meaning that edge → node → edges is not possible 
-and the loopUpTable "nodeEdgeMap" needs to be used with the nodeId for tranversal 
+Edges edgeNodes pair contain stub nodes meaning that edge → node → edges is not possible
+and the loopUpTable "nodeEdgeMap" needs to be used with the nodeId for tranversal
 -}
 
 -- Every valid hex satisfies q + r + s = 0
@@ -55,33 +55,31 @@ neighbours :: Cord -> [Cord]
 neighbours c = map (addCord c) directions
 
 -- Standard resource distribution
--- fixed layout, reading from top-left to bottom-right
-
 tileData :: [(Maybe Resource, Int)]
 tileData =
     -- 3 tiles, top
-    [ (Just Ore,   10)
+    [ (Just Ore,    10)
     , (Just Wool,    2)
-    , (Just Lumber,     9)
+    , (Just Lumber,  9)
     -- 4 tiles
-    , (Just Grain,   12)
-    , (Just Brick,     6)
+    , (Just Grain,  12)
+    , (Just Brick,   6)
     , (Just Wool,    4)
-    , (Just Brick,    10)
+    , (Just Brick,  10)
     -- 5 tiles, middle
-    , (Just Grain,    9)
-    , (Just Lumber,    11)
-    , (Nothing,       0)   -- Desert
-    , (Just Lumber,     3)
-    , (Just Ore,    8)
+    , (Just Grain,   9)
+    , (Just Lumber, 11)
+    , (Nothing,      0)   -- Desert
+    , (Just Lumber,  3)
+    , (Just Ore,     8)
     -- 4 tiles
-    , (Just Lumber,     8)
-    , (Just Ore,    3)
-    , (Just Grain,    4)
+    , (Just Lumber,  8)
+    , (Just Ore,     3)
+    , (Just Grain,   4)
     , (Just Wool,    5)
     -- 3 tiles, bottom
-    , (Just Brick,     5)
-    , (Just Grain,    6)
+    , (Just Brick,   5)
+    , (Just Grain,   6)
     , (Just Wool,   11)
     ]
 
@@ -89,75 +87,60 @@ makeTile :: Int -> (Maybe Resource, Int) -> (Cord, Tile)
 makeTile idx (res, tok) =
     ( catanCords !! idx
     , Tile
-        { tileId  = idx
-        , resource = res
-        , token    = tok
-        , robber   = False  -- robber
-        , nodes    = []
-        , edges    = []        
+        { tileId    = TileId idx
+        , resource  = res
+        , token     = tok
+        , robber    = False
+        , tileNodes = map NodeId (tileNodeIds !! idx)
+        , tileEdges = map EdgeId (tileEdgeIds !! idx)
         }
     )
 
 catanTiles :: [(Cord, Tile)]
 catanTiles = zipWith makeTile [0..] tileData
 
-makeNode :: Int -> Maybe Building -> [Edge] -> [Int] -> Node
-makeNode nid bld nE nT = Node
-  { nodeId = NodeId nid
-  , building = bld
-  , nodeEdges = nE
-  , nodeTiles = nT
-  } 
+makeNode :: Int -> [EdgeId] -> [TileId] -> Node
+makeNode nid nE nT = Node
+    { nodeId    = NodeId nid
+    , building  = Nothing
+    , nodeEdges = nE
+    , nodeTiles = nT
+    }
 
-makeEdge :: Int -> Maybe Road -> (Node, Node) -> Edge 
-makeEdge eid rd nds = Edge 
-  { edgeId = EdgeId eid 
-  , road = rd
-  , edgeNodes = nds
-  }
+makeEdge :: Int -> (NodeId, NodeId) -> Edge
+makeEdge eid nds = Edge
+    { edgeId    = EdgeId eid
+    , road      = Nothing
+    , edgeNodes = nds
+    }
 
--- Building node and edge pairs
--- Pass 1: build all 72 edges with placeholder nodes
--- Nodes inside Edge are minimal — just ID, no edges/tiles yet
+-- Build all 72 edges
 buildEdges :: Map.Map Int Edge
 buildEdges = Map.fromList
-    [ (eid, makeEdge eid Nothing (stubNode n1, stubNode n2)) 
-    | (eid, (NodeId n1, NodeId n2)) <- zip [1..] edgeNodePairs]
-  where
-    stubNode i = makeNode i Nothing [] []
-
--- Pass 2: build all 54 nodes using real edges and tileIds
-buildNodes :: Map.Map Int Edge -> Map.Map Int Node
-buildNodes edgeMap = Map.fromList 
-    [ (nid, makeNode nid Nothing myEdges myTiles)
-    | nid <- [1..54]
-    , let myEdgeIds = nodeEdgeMap Map.! nid 
-          myEdges   = [ edgeMap Map.! eid | eid <- myEdgeIds ]
-          myTiles   = Map.findWithDefault [] nid nodeTileMap
+    [ (eid, makeEdge eid (NodeId n1, NodeId n2))
+    | (eid, (NodeId n1, NodeId n2)) <- zip [1..] edgeNodePairs
     ]
 
--- Pass 3: populate tiles with proper nodes and edges
-buildBoard :: [(Cord, Tile)]
-buildBoard =
-    let edgeMap = buildEdges
-        nodeMap = buildNodes edgeMap
-        lookupNode i  = nodeMap Map.! i
-        lookupEdge i  = edgeMap Map.! i
-    in  [ ( cord
-          , tile
-              { nodes = map lookupNode (tileNodes !! tileId tile)
-              , edges = map lookupEdge (tileEdges !! tileId tile)
-              }
-          )
-        | (cord, tile) <- catanTiles
-        ]
+-- Build all 54 nodes
+buildNodes :: Map.Map Int Node
+buildNodes = Map.fromList
+    [ (nid, makeNode nid myEdges myTiles)
+    | nid <- [1..54]
+    , let myEdges = map EdgeId (nodeEdgeMap Map.! nid)
+          myTiles = map TileId (Map.findWithDefault [] nid nodeTileMap)
+    ]
 
+-- Build the complete Board
 catanBoard :: Board
-catanBoard = Board $ Map.fromList buildBoard
+catanBoard = Board
+    { tiles = Map.fromList [ (cord, tile) | (cord, tile) <- catanTiles ]
+    , nodes = Map.fromList [ (NodeId nid, node) | (nid, node) <- Map.toList buildNodes ]
+    , edges = Map.fromList [ (EdgeId eid, edge) | (eid, edge) <- Map.toList buildEdges ]
+    }
 
 
-tileNodes :: [[Int]]
-tileNodes =
+tileNodeIds :: [[Int]]
+tileNodeIds =
   -- Row 1 (3 tiles)
   [ [1,5,9,13,8,4]       
   , [2,6,10,14,9,5]      
@@ -184,8 +167,8 @@ tileNodes =
   , [42,47,51,54,50,46]  
   ]
 
-tileEdges :: [[Int]]
-tileEdges =
+tileEdgeIds :: [[Int]]
+tileEdgeIds =
   -- Row 1 (3 tiles)
   [ [2,8,13,12,7,1]       
   , [4,9,15,14,8,3]       

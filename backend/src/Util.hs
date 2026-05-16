@@ -4,6 +4,7 @@ module Util where
 import qualified Data.Map as Map 
 import Data.UUID.Types
 import System.Random
+import Data.Maybe
 
 -- Local
 import Types
@@ -25,31 +26,29 @@ oneUUID = fst $ random g0
 
 -- Get a node from the board by NodeId
 lookupNode :: NodeId -> Board -> Maybe Node
-lookupNode nid (Board tileMap) =
-    foldr findNode Nothing (Map.elems tileMap)
-  where
-    findNode tile acc = case filter ((== nid) . nodeId) (nodes tile) of
-        (n:_) -> Just n
-        []    -> acc
+lookupNode nid brd = Map.lookup nid (nodes brd)
 
 -- Get an edge from the board by EdgeId
 lookupEdge :: EdgeId -> Board -> Maybe Edge
-lookupEdge eid (Board tileMap) =
-    foldr findEdge Nothing (Map.elems tileMap)
-  where
-    findEdge tile acc = case filter ((== eid) . edgeId) (edges tile) of
-        (e:_) -> Just e
-        []    -> acc
+lookupEdge eid brd = Map.lookup eid (edges brd)
+
+lookupTile :: Cord -> Board -> Maybe Tile 
+lookupTile crd brd = Map.lookup crd (tiles brd)
 
 -- Get a player by color
 getPlayer :: Color -> GameState -> Player
-getPlayer color gs = snd . head $ filter ((== color) . fst) (players gs)
+getPlayer color gs = (players gs) Map.! color 
 
 -- 
 adjacentNodes :: Node -> Board -> [Node]
-adjacentNodes node b =
-    [ n | e <- nodeEdges node, let (n1, n2) = edgeNodes e
-    , nid <- [nodeId n1, nodeId n2]
-    , nid /= nodeId node
-    , Just n <- [lookupNode nid b]
-    ]
+adjacentNodes node brd =
+    concatMap edgeNeighbors (nodeEdges node)
+  where
+    edgeNeighbors eid =
+        case Map.lookup eid (edges brd) of
+            Nothing -> []
+            Just edge ->
+                let (n1, n2) = edgeNodes edge
+                    other =
+                        if n1 == nodeId node then n2 else n1
+                in maybeToList $ Map.lookup other (nodes brd)
