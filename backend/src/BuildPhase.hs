@@ -25,7 +25,7 @@ placeSettlementIO gs color = do
         Just 0 -> return gs
         Just int -> do
             let nid = NodeId int
-                pid = playerId $ getPlayer color gs
+                pid = playerId $ getPlayer gs color
             case lookupNode nid (board gs) of
                 Nothing -> do
                     putStrLn "Invalid NodeId, please try again."
@@ -49,7 +49,7 @@ placeRoadIO gs color = do
     hFlush stdout
     input <- getLine
     let eid  = EdgeId (read input)
-        pid = playerId $ getPlayer color gs
+        pid = playerId $ getPlayer gs color
         newBoard   = placeRoad eid pid (board gs)
         edge = fromJust $ lookupEdge eid newBoard
         newPlayers = addRoad color edge (players gs)
@@ -64,7 +64,7 @@ placeCityIO gs color = do
     hFlush stdout
     input <- getLine
     let nid = NodeId (read input)
-        pid = playerId $ getPlayer color gs
+        pid = playerId $ getPlayer gs color
         newBoard = placeCity nid pid (board gs)
     return gs { board = newBoard } -}
 
@@ -75,7 +75,7 @@ placeCityIO gs color = do
 checkSettlementRes :: GameState -> Color -> Bool
 checkSettlementRes gs color = all (>= 1) [nLumber, nGrain, nBrick, nWool]
   where
-    res     = resources $ getPlayer color gs 
+    res     = resources $ getPlayer gs color
     nLumber = res Map.! Lumber
     nGrain  = res Map.! Grain
     nBrick  = res Map.! Brick
@@ -85,7 +85,7 @@ checkSettlementRes gs color = all (>= 1) [nLumber, nGrain, nBrick, nWool]
 checkRoadRes :: GameState -> Color -> Bool
 checkRoadRes gs color = all (>= 1) [nLumber, nBrick]
   where
-    res     = resources $ getPlayer color gs
+    res     = resources $ getPlayer gs color
     nLumber = res Map.! Lumber
     nBrick  = res Map.! Brick
 
@@ -93,7 +93,7 @@ checkRoadRes gs color = all (>= 1) [nLumber, nBrick]
 checkCityRes :: GameState -> Color -> Bool
 checkCityRes gs color = nOre >= 3 && nGrain >= 2
   where
-    res     = resources $ getPlayer color gs
+    res     = resources $ getPlayer gs color
     nOre   = res Map.! Ore
     nGrain = res Map.! Grain
 

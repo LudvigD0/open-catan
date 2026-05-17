@@ -149,6 +149,15 @@ executable api
         , servant-server
         , warp
         , text
+        , common
+        , uuid
+        , uuid-types
+        , containers
+        , random
+    other-modules:
+        Main
+        , BuildPhase
+        , Util
 
     -- Directories containing source files.
     hs-source-dirs:     examples src

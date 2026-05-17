@@ -28,6 +28,7 @@
               pkgs.zlib
               pkgs.haskellPackages.aeson
               pkgs.haskellPackages.servant
+              pkgs.haskellPackages.servant-server
               pkgs.haskellPackages.either
               pkgs.haskellPackages.warp
             ];

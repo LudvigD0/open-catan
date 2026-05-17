@@ -124,7 +124,7 @@ printBoard (Board tileMap _ _) = do
 -- TODO: Check for valid placement, ex. roads connected to settlement, no house within 2 edges
 buildPhase :: GameState -> Color -> IO GameState
 buildPhase gs color = do
-    let player = getPlayer color gs 
+    let player = getPlayer gs color
     printResources player
     putStrLn "\nBuild phase — choose an action:"
     when (checkSettlementRes gs color) $ putStrLn "  1. Place Settlement"

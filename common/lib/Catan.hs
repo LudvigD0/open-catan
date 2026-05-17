@@ -110,8 +110,8 @@ lookupTile crd brd = Map.lookup crd (tiles brd)
 
 
 -- Get a player by color
-getPlayer :: Color -> GameState -> Player
-getPlayer color gs = (players gs) Map.! color 
+getPlayer :: GameState -> Color -> Player
+getPlayer gs color = (players gs) Map.! color 
 
 -- 
 adjacentNodes :: Node -> Board -> [Node]
