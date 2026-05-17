@@ -9,23 +9,22 @@
 ----------------------------------------------------------------------------
 module Main where
 ----------------------------------------------------------------------------
-import           Miso
-import qualified Miso.Html as H
-import qualified Miso.Html.Property as P
-import           Miso.Lens
 
-import qualified Miso.Svg.Element as S
-import qualified Miso.Svg.Property as SP
-import qualified Miso.CSS as CSS
+import Miso
 import qualified Miso.Html.Element as H
 import qualified Miso.Html.Property as HP
---import qualified Miso.Html.Style as CSS
----
-import           Miso.String (ms)
-import           Data.List (intercalate)
-import           Coordinates
-import           Types
-import           Catan
+import Miso.Html.Property (className, id_)
+
+import BoardView
+import Types
+--import Catan
+
+import Data.UUID.Types (UUID, fromWords)
+--import Data.UUID (UUID)
+--import qualified Data.UUID as UUID
+
+
+
 
 
 {- import qualified Miso.Html.Element as H
@@ -35,10 +34,7 @@ import           Catan
 
 ----------------------------------------------------------------------------
 -- | Sum type for App events
-data Action
-  = NoOp
-  | ClickHex
-  deriving (Show, Eq)
+
 ----------------------------------------------------------------------------
 -- | Entry point for a miso application
 main :: IO ()
@@ -59,6 +55,8 @@ app = component () updateModel viewModel
 -- | Updates model, optionally introduces side effects
 updateModel :: Action -> Effect parent () Action
 updateModel NoOp = pure ()
+updateModel ClickHex = pure ()
+updateModel (ClickNode _) = pure ()
 
 
 --------------------------- helpers
@@ -66,89 +64,81 @@ updateModel NoOp = pure ()
 --  deriving (Show, Eq, Ord)
 
 -- Board hexes ska antagligen bort eftersom att vi redan skapar board i Cordinates
-boardHexes :: [Cord] 
-boardHexes = -- skapar 19 hex
-  [ Cord q r s
-  | q <- [-2..2]
-  , r <- [-2..2]
-  , s <- [-2..2]
-  , q + r + s == 0
+
+
+
+
+--nodePosition :: 
+
+--edgePosition :: 
+
+
+
+
+
+
+uuids :: [UUID]
+uuids =
+  [ fromWords 0x550e8400 0xe29b41d4 0xa7164466 0x55440000
+  , fromWords 0x6ba7b810 0x9dad11d1 0x80b400c0 0x4fd430c8
+  , fromWords 0x123e4567 0xe89b12d3 0xa4564266 0x14174000
+  , fromWords 0xf47ac10b 0x58cc4372 0xa5670e02 0xb2c3d479
   ]
 
+--gameState :: IO GameState
+--gameState = initGameState uuids
 
 
 
 
 
-hexToPixel :: Double -> Cord -> (Double, Double) -- beräkna  i
-hexToPixel size (Cord q r _s) =
-  let q' = fromIntegral q
-      r' = fromIntegral r
-      x = size * sqrt 3 * (q' + r' / 2)
-      y = size * 1.5 * r'
-  in (x + 300, y + 300)
 
-hexCorners :: Double -> (Double, Double) -> [(Double, Double)]
-hexCorners size (cx, cy) =
-  [ let angle = pi / 180 * (60 * fromIntegral i - 30)
-    in (cx + size * cos angle, cy + size * sin angle)
-  | i <- [0..5]
-  ]
+--- model är wrappern till allt typ
+viewModel :: () -> View () Action
+viewModel _ =
+  H.div_
+    [ id_ "container", className "container" ]
+    [ viewWater
+    , viewSand
+    , viewBoard
+    ]
+  
+    
+----------------
+viewSand :: View () Action
+viewSand = 
+  H.img_
+    [ className "sand-background"
+    , HP.src_ "/static/sand.png"
+    , HP.alt_ "Sand background"
+    ]
 
-pointsText :: [(Double, Double)] -> MisoString -- 
+viewWater :: View () Action
+viewWater = 
+  H.img_
+    [ className "water-background"
+    , HP.src_ "/static/water.png"
+    , HP.alt_ "Water background"  
+    ]
+
+----------------------------------------------------------------------------
+
+
+{-  H.svg_
+        [ SP.viewBox_ "0 0 600 600"
+        , CSS.style_
+          [ CSS.width "600px"
+          , CSS.height "600px"
+          , CSS.borderStyle "solid"
+          ]
+        ] -}
+
+
+
+
+{- pointsText :: [(Double, Double)] -> MisoString -- 
 pointsText points =
   ms $ intercalate " "
     [ show x <> "," <> show y
     | (x, y) <- points
-    ]
-
-viewHex :: Cord -> View () Action
-viewHex hex =
-  let center = hexToPixel 60 hex --beräkna mittpunkt
-      points = hexCorners 60 center -- skicka mittpunkten för att beräkna alla 6 kordinater
-  in
-    S.polygon_
-      [ SP.points_ (pointsText points) -- Kordinater går från tuples till läsbar syntax fär miso vilket är ex: "100,100"
-      , CSS.style_
-        [ CSS.fill "#d9a066"
-        , CSS.stroke "black"
-        , CSS.strokeWidth "3"
-        ]
-      ]
-
-------------------------------helpers end
-----------------------------------------------------------------------------
--- | Constructs a virtual DOM from a model
-
-
-
-viewModel :: () -> View () Action
-viewModel _ =
-  H.div_
-    []
-    [ H.svg_
-      [ SP.viewBox_ "0 0 600 600"
-      , CSS.style_
-        [ CSS.width "600px"
-        , CSS.height "600px"
-        , CSS.borderStyle "solid"
-        ]
-      ]
-      (map viewHex boardHexes)
-      ,
-      viewImage
-    ]
-    
-----------------
- 
-viewImage :: View () Action
-viewImage =
-  H.img_
-    [ HP.src_ "/public/assets/brick.png"
-    , HP.alt_ "Brick image"
-    , HP.width_ "100"
-    , HP.height_ "100"
-    ]
-
-
-----------------------------------------------------------------------------
+    ] -}

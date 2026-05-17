@@ -1,0 +1,14 @@
+.PHONY: repl static dev
+
+repl:
+	wasm32-wasi-cabal repl frontend --project-file=cabal.project.wasm --repl-options="-fghci-browser"
+
+static:
+	http-server static -p 8081 --cors
+
+dev:
+	@echo "Starta static-servern i en terminal:"
+	@echo "  make static"
+	@echo ""
+	@echo "Starta sedan GHCi i en annan terminal:"
+	@echo "  make repl"

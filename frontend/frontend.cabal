@@ -85,7 +85,12 @@ executable frontend
     build-depends:    base >=4.18 && <5,
                       miso,
                       text,
-                      common
+                      common,
+                      uuid-types,
+                      containers
+
+    other-modules:    BoardView
+    
 
     -- Directories containing source files.
     hs-source-dirs:   app

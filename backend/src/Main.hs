@@ -6,18 +6,18 @@ import qualified Data.Map as Map
 import Control.Monad
 import System.Random
 import Data.Maybe 
-import Data.List (intercalate, sortOn, elemIndex)
+import Data.List (elemIndex)
 import BuildPhase
-import Data.UUID
 
 -- Local
 import Types 
-import Coordinates
 import Util
+import Catan (initGameState, autoPlace, getPlayer)
 
 main :: IO ()
 main = do
-    gs <- initGameState
+    start <- randomRIO (0, 3)
+    let gs = initGameState someUUIDs start
     let gs' = autoPlace gs
     putStrLn "Starting Catan!"
     gameLoop gs'
@@ -60,64 +60,16 @@ nextPlayer current ps =
     in  keys !! nextIdx
     
 ------------------------------------------------ Initaialization ------------------------------------------------------------------------------
-initGameState :: IO GameState
-initGameState = do
-    start <- randomRIO (1, 4)
-    let newPlayers                = map initPlayer someUUIDs    -- from Util
-        colors = [Red, Blue, Orange, White]
-    return GameState
-        { gameId      = 0
-        , board       = catanBoard
-        , players     = Map.fromList $ zip colors newPlayers
-        , currentTurn = colors !! start 
-        , dice        = (0, 0)
-        }
 
-initPlayer :: UUID -> Player
-initPlayer uid = Player
-    { playerId  = PlayerId uid
-    , points    = 0
-    , buildings = []
-    , roads   = []
-    , resources = Map.fromList [(res, 0) | res <- [Lumber, Ore, Grain, Brick, Wool]]
-    }
 
--- Each tuple: (settlement NodeId, road EdgeId)
-beginnerPlacements :: [(Color, [(NodeId, EdgeId)])]
-beginnerPlacements =
-    [ ( Red
-      , [ (NodeId 9, EdgeId 14)   
-        , (NodeId 29, EdgeId 42)   
-        ] )
-    , ( Blue
-      , [ (NodeId 42, EdgeId 53)   
-        , (NodeId 40, EdgeId 57)   
-        ] )
-    , ( Orange
-      , [ (NodeId 41, EdgeId 59)   
-        , (NodeId 15, EdgeId 16)   
-        ] )
-    , ( White
-      , [ (NodeId 18, EdgeId 26)   
-        , (NodeId 32, EdgeId 38)   
-        ] )
-    ]
+-----
+--Init functions are now moved to common/lib
 
--- Uses beginnerplacements to add the starting settlements and road for each player
-autoPlace :: GameState -> GameState
-autoPlace gs = foldl placePair gs allPlacements
-  where
-    allPlacements =
-        [ (color, nid, eid)
-        | (color, pairs) <- beginnerPlacements, (nid, eid) <- pairs]
+---
 
--- Adds a settlement and road at the same time 
-placePair :: GameState -> (Color, NodeId, EdgeId) -> GameState
-placePair gs (color, nid, eid) =
-    let pid        = playerId $ (players gs) Map.! (currentTurn gs) 
-        newBoard   = placeRoad eid pid $ placeSettlement nid pid (board gs)
-        newPlayers = addRoadForced color eid $ addSettlementForced color nid (players gs)
-    in  gs { board = newBoard, players = newPlayers }
+
+
+
 
 ------------------------------------------------VP Check------------------------------------------------------------------------------
 

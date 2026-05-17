@@ -9,6 +9,7 @@ import Text.Read (readMaybe)
 -- Local
 import Types
 import Util
+import Catan (getPlayer, lookupNode, lookupEdge, adjacentNodes)
 
 -- Uses playerInput to place a new settlement, checks res in buildPhase
 -- Adds the settlement to board, player, and removes req resources
@@ -96,92 +97,8 @@ checkCityRes gs color = nOre >= 3 && nGrain >= 2
     nOre   = res Map.! Ore
     nGrain = res Map.! Grain
 
------------------------------- Board State ----------------------------------------
 
--- Updates a board node with a new settlement belonging to playerid
-placeSettlement :: NodeId -> PlayerId -> Board -> Board
-placeSettlement nid pid brd =
-    brd { nodes = Map.adjust updateNode nid (nodes brd) }
-  where
-    updateNode n = n { building = Just (Settlement pid) }
 
--- Updates a board node with a new city belonging to playerid
-placeCity :: NodeId -> PlayerId -> Board -> Board
-placeCity nid pid brd =
-    brd { nodes = Map.adjust updateNode nid (nodes brd) }
-  where
-    updateNode n = n { building = Just (City pid) }
-
--- Updates a board edge with a new road belonging to playerid
-placeRoad :: EdgeId -> PlayerId -> Board -> Board
-placeRoad eid pid brd =
-    brd { edges = Map.adjust updateEdge eid (edges brd) }
-  where
-    updateEdge e = e { road = Just (Road pid) }
-
------------------------------- Player State ----------------------------------------
-
--- Does not add duplicate nodeId since player needs to have settlement
--- to build city. Deducts resources for city 
-addCity :: Color -> Map.Map Color Player -> Map.Map Color Player
-addCity color = Map.adjust updatePlayer color
-  where
-    updatePlayer p =
-        p { resources = updateResources (resources p) }
-
-    updateResources =
-        Map.mapWithKey deduct
-
-    deduct res amount
-        | res == Grain = amount - 2
-        | res == Ore   = amount - 3
-        | otherwise    = amount
-
--- Adds nodeId to players buildings and deducts resources for settlement 
-addSettlement :: Color -> NodeId -> Map.Map Color Player -> Map.Map Color Player
-addSettlement color nid plyrs =
-    Map.adjust updatePlayer color plyrs
-  where
-    updatePlayer p =
-        p
-          { buildings = nid : buildings p
-          , resources = updateRes (resources p)
-          }
-
-    updateRes resM = Map.mapWithKey deduct resM
-    deduct res i
-        | res `elem` [Lumber, Grain, Brick, Wool] = i - 1
-        | otherwise                               = i
-
--- Adds edgeId to players roads, deducts resources for road
-addRoad :: Color -> EdgeId -> Map.Map Color Player -> Map.Map Color Player
-addRoad color eid plyrs =
-    Map.adjust updatePlayer color plyrs
-  where
-    updatePlayer p =
-        p
-          { roads = eid : roads p
-          , resources = updateRes (resources p)
-          }
-
-    updateRes resM = Map.mapWithKey deduct resM
-    deduct res i
-        | res `elem` [Lumber, Brick] = i - 1
-        | otherwise                               = i
-    
--- Does not remove resources
-addSettlementForced :: Color -> NodeId -> Map.Map Color Player -> Map.Map Color Player
-addSettlementForced color nid plyrs =
-    Map.adjust updatePlayer color plyrs
-  where
-    updatePlayer p = p { buildings = nid : buildings p }
-
--- Does not remove resources
-addRoadForced :: Color -> EdgeId -> Map.Map Color Player -> Map.Map Color Player
-addRoadForced color eid plyrs =
-    Map.adjust updatePlayer color plyrs
-  where
-    updatePlayer p = p { roads = eid : roads p }  
 
 ------------------------------ Validity Checks ----------------------------------------
 

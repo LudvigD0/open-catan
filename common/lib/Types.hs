@@ -13,6 +13,13 @@ data Board = Board
   , edges :: Map EdgeId Edge
   }
 
+data Action
+  = NoOp
+  | ClickHex
+  | ClickNode NodeId
+  deriving (Show, Eq)
+
+
 -- Catan types 
 data Color    = Red | Blue | Orange | White deriving (Show, Eq, Ord)
 data Resource = Lumber | Ore | Grain | Brick | Wool deriving (Show, Eq, Ord)
