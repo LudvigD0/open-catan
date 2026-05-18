@@ -5,19 +5,19 @@
 module Types where 
 import Data.Map (Map)
 import Data.UUID.Types
-import qualified Data.Aeson as Json
-import           GHC.Generics
+import Data.Aeson
+import GHC.Generics
 
 -- Board  ======================================================================
 data Cord = Cord Int Int Int 
-  deriving (Show, Eq, Ord, Generic, Json.ToJSON, Json.ToJSONKey, Json.FromJSON, Json.FromJSONKey)
+  deriving (Show, Eq, Ord, Generic, ToJSON, ToJSONKey, FromJSON, FromJSONKey)
 
 data Board = Board
   { tiles :: Map Cord Tile
   , nodes :: Map NodeId Node
   , edges :: Map EdgeId Edge
   }
-  deriving(Eq, Generic, Json.ToJSON, Json.FromJSON)
+  deriving(Eq, Generic, ToJSON, FromJSON)
 
 data Action
   = NoOp
@@ -31,7 +31,7 @@ data Color
   | Blue 
   | Orange 
   | White 
-  deriving (Show, Eq, Ord, Generic, Json.ToJSON, Json.ToJSONKey, Json.FromJSON, Json.FromJSONKey)
+  deriving (Show, Eq, Ord, Generic, ToJSON, ToJSONKey, FromJSON, FromJSONKey)
 
 data Resource 
   = Lumber 
@@ -39,18 +39,18 @@ data Resource
   | Grain 
   | Brick 
   | Wool 
-  deriving (Show, Eq, Ord, Generic, Json.ToJSON, Json.ToJSONKey, Json.FromJSON, Json.FromJSONKey)
+  deriving (Show, Eq, Ord, Generic, ToJSON, ToJSONKey, FromJSON, FromJSONKey)
 
 data Road     = Road PlayerId 
-  deriving (Show, Eq, Generic, Json.ToJSON, Json.FromJSON)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data Building 
   = Settlement PlayerId 
   | City PlayerId 
-  deriving (Show, Eq, Generic, Json.ToJSON, Json.FromJSON)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- Player ======================================================================
-newtype PlayerId = PlayerId UUID deriving (Show, Eq, Generic, Json.ToJSON, Json.FromJSON)
+newtype PlayerId = PlayerId UUID deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data Player = Player
   { playerId  :: PlayerId
@@ -58,7 +58,7 @@ data Player = Player
   , buildings :: [NodeId]
   , roads     :: [EdgeId]
   , resources :: Map Resource Int 
-  } deriving (Show, Eq, Generic, Json.ToJSON, Json.FromJSON)
+  } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- Game  =======================================================================
 
@@ -70,12 +70,12 @@ data GameState = GameState
   , turnPhase   :: TurnPhase
   , dice        :: (Int, Int)
   }
-  deriving(Eq, Generic, Json.ToJSON, Json.FromJSON) -- do we need "Eq"?
+  deriving(Eq, Generic, ToJSON, FromJSON) -- do we need "Eq"?
 
 -- API  ================================================================
 -- Updated for GameActions, added to GameState
 data TurnPhase = Roll | Build | GameOver Color 
- deriving (Show, Eq, Generic, Json.ToJSON, Json.FromJSON)
+ deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- All actions when a game loop is initialized
 data GameAction
@@ -84,7 +84,7 @@ data GameAction
   | ActBuildSettlement NodeId
   | ActBuildCity NodeId
   | ActEndTurn
-  deriving(Show, Eq, Generic, Json.ToJSON, Json.FromJSON)
+  deriving(Show, Eq, Generic, ToJSON, FromJSON)
 
 --- Errors for the API 
 data GameError
@@ -94,23 +94,23 @@ data GameError
   | InvalidSettlementPlacement
   | InvalidCityPlacement
   | InvalidGameAction
-  deriving (Show, Eq, Generic, Json.ToJSON, Json.FromJSON)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- Socket Data  ================================================================
 data WSMessage 
   = PkgBoardStatus GameState
   | PkgGameAction GameAction
-  deriving(Eq, Generic, Json.ToJSON, Json.FromJSON) -- do we need "Eq"?
+  deriving(Eq, Generic, ToJSON, FromJSON) -- do we need "Eq"?
 
 -- Graph Structure  ============================================================
 newtype TileId = TileId Int 
-  deriving (Show, Eq, Ord, Generic, Json.ToJSON, Json.FromJSON)
+  deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 newtype EdgeId = EdgeId Int 
-  deriving (Show, Eq, Ord, Generic, Json.ToJSON, Json.ToJSONKey, Json.FromJSON, Json.FromJSONKey)
+  deriving (Show, Eq, Ord, Generic, ToJSON, ToJSONKey, FromJSON, FromJSONKey)
 
 newtype NodeId = NodeId Int 
-  deriving (Show, Eq, Ord, Generic, Json.ToJSON, Json.ToJSONKey, Json.FromJSON, Json.FromJSONKey)
+  deriving (Show, Eq, Ord, Generic, ToJSON, ToJSONKey, FromJSON, FromJSONKey)
 
 data Tile = Tile
   { tileId   :: TileId
@@ -119,17 +119,17 @@ data Tile = Tile
   , robber   :: Bool
   , tileNodes :: [NodeId]
   , tileEdges :: [EdgeId]
-  } deriving (Show, Eq, Generic, Json.ToJSON, Json.FromJSON)
+  } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data Edge = Edge
   { edgeId    :: EdgeId
   , road      :: Maybe Road
   , edgeNodes :: (NodeId, NodeId)
-  } deriving (Eq, Generic, Json.ToJSON, Json.FromJSON)
+  } deriving (Eq, Generic, ToJSON, FromJSON)
 
 data Node = Node
   { nodeId    :: NodeId
   , building  :: Maybe Building
   , nodeEdges :: [EdgeId]
   , nodeTiles :: [TileId]
-  } deriving (Eq, Generic, Json.ToJSON, Json.FromJSON)
+  } deriving (Eq, Generic, ToJSON, FromJSON)
