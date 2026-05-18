@@ -1,13 +1,8 @@
 module Util where 
 
 -- Libs
-import qualified Data.Map as Map 
 import Data.UUID
 import System.Random
-import Data.Maybe
-
--- Local
-import Types
 
 someUUIDs :: [UUID]
 someUUIDs =
@@ -23,6 +18,3 @@ oneUUID :: UUID
 oneUUID = fst $ random g0 
  where 
     g0 = mkStdGen 125
-
-
-

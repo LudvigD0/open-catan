@@ -6,12 +6,6 @@ import qualified Data.Map as Map
 -- Local
 import Types
 
-{-
-!!! Important !!!
-Edges edgeNodes pair contain stub nodes meaning that edge → node → edges is not possible
-and the loopUpTable "nodeEdgeMap" needs to be used with the nodeId for tranversal
--}
-
 -- Every valid hex satisfies q + r + s = 0
 -- hexRange n generates all cube coords within radius n of the origin
 hexRange :: Int -> [Cord]
@@ -137,7 +131,6 @@ catanBoard = Board
     , nodes = Map.fromList [ (NodeId nid, node) | (nid, node) <- Map.toList buildNodes ]
     , edges = Map.fromList [ (EdgeId eid, edge) | (eid, edge) <- Map.toList buildEdges ]
     }
-
 
 tileNodeIds :: [[Int]]
 tileNodeIds =

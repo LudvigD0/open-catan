@@ -1,117 +1,93 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
-import Data.Aeson (FromJSON, ToJSON)
-import Data.Text (Text)
+-- Libs
+import Control.Concurrent.MVar
+import Control.Monad.IO.Class (liftIO)
+import Data.Aeson (ToJSON)
 import GHC.Generics (Generic)
 import Network.Wai.Handler.Warp (run)
 import Servant
 
--- ============================================================
--- 1. DATA TYPES
--- ============================================================
+-- Local
+import GameActions
+import Types
 
--- GET response: a rectangle with its computed area
-data Rectangle = Rectangle
-  { width  :: Double
-  , height :: Double
-  , area   :: Double       -- computed by our logic function
-  } deriving (Show, Generic)
+-- Respose which represent successful or failed request
+data GameResponse
+  = GameStateResponse GameState
+  | GameErrorResponse GameError
+  deriving (Generic)
 
-instance ToJSON Rectangle
+instance ToJSON GameResponse
 
--- POST request body: two numbers to add
-data AddRequest = AddRequest
-  { numA :: Double
-  , numB :: Double
-  } deriving (Show, Generic)
+-- Global game state, curretly only a single instance of the game 
+type GameStore = MVar (Maybe GameState)
 
-instance FromJSON AddRequest
-
--- POST response: the result
-data AddResult = AddResult
-  { inputA :: Double
-  , inputB :: Double
-  , result :: Double       -- computed by our logic function
-  } deriving (Show, Generic)
-
-instance ToJSON AddResult
-
-
--- ============================================================
--- 2. BUSINESS LOGIC (pure functions, separate from HTTP layer)
--- ============================================================
-
-computeArea :: Double -> Double -> Double
-computeArea w h = w * h
-
-computeSum :: Double -> Double -> Double
-computeSum a b = a + b
-
-
--- ============================================================
--- 3. API TYPE  (the servant "spec" — routes live here)
--- ============================================================
---
---   GET  /rectangle?width=3&height=4   →  Rectangle JSON
---   POST /add                          →  AddResult JSON
---                                         (body: { "numA": 1, "numB": 2 })
-
+{-  Curretly 3 requests 
+POST /game/start    -- Start new game
+GET  /game          -- Get current state
+POST /game/action { action: GameAction } -- Try GameAction 
+ -}
 type API =
-       "rectangle" :> QueryParam "width"  Double
-                   :> QueryParam "height" Double
-                   :> Get '[JSON] Rectangle
-  :<|> "add"       :> ReqBody '[JSON] AddRequest
-                   :> Post    '[JSON] AddResult
+       "game" :> "start"
+              :> Post '[JSON] GameResponse
+  :<|> "game" :> Get '[JSON] GameResponse
+  :<|> "game" :> "action"
+              :> ReqBody '[JSON] GameAction
+              :> Post '[JSON] GameResponse
 
-  :<|> "action"    :> ReqBody '[JSON] GameAction
-                   :> Post    '[JSON] GameState
+--------------------------------------- Handlers -------------------------------------------------
+-- Starts new game instance 
+startGameHandler :: GameStore -> Handler GameResponse
+startGameHandler store = liftIO $ do
+    let gs = startGame
+    modifyMVar_ store $ \_ -> return (Just gs)
+    return $ GameStateResponse gs
 
+-- Get current gamestate
+getGameHandler :: GameStore -> Handler GameResponse
+getGameHandler store = liftIO $ do
+    currentGame <- readMVar store
+    return $ case currentGame of
+        Nothing -> GameErrorResponse GameNotStarted
+        Just gs -> GameStateResponse gs
 
--- ============================================================
--- 4. HANDLERS  (one per route, in the same order as the API type)
--- ============================================================
+-- Call coresponding gameaction handler for request GameAction, returns new gamestate
+actionHandler :: GameStore -> GameAction -> Handler GameResponse
+actionHandler store action = liftIO $
+    modifyMVar store $ \currentGame ->
+        case currentGame of
+            Nothing ->
+                return (Nothing, GameErrorResponse GameNotStarted)
+            Just gs -> do
+                result <- applyGameAction action gs
+                case result of
+                    Left err ->
+                        return (Just gs, GameErrorResponse err)
+                    Right gs' ->
+                        return (Just gs', GameStateResponse gs')
 
--- GET request 
-rectangleHandler :: Maybe Double -> Maybe Double -> Handler Rectangle
-rectangleHandler mw mh = do
-  let w = maybe 1.0 id mw   -- default to 1.0 if param missing
-      h = maybe 1.0 id mh
-  return $ Rectangle w h (computeArea w h)
-
--- POST request 
-addHandler :: AddRequest -> Handler AddResult
-addHandler req = do
-  let a = numA req
-      b = numB req
-  return $ AddResult a b (computeSum a b)
-
-
--- ============================================================
--- 5. WIRING  (connect the API type to the handlers)
--- ============================================================
-
-server :: Server API
-server = rectangleHandler :<|> addHandler
+server :: GameStore -> Server API
+server store =
+    startGameHandler store
+    :<|> getGameHandler store
+    :<|> actionHandler store
 
 api :: Proxy API
 api = Proxy
 
-app :: Application
-app = serve api server
-
-
--- ============================================================
--- 6. MAIN
--- ============================================================
+app :: GameStore -> Application
+app store = serve api (server store)
 
 main :: IO ()
 main = do
-  putStrLn "Running on http://localhost:8080"
-  putStrLn "  GET  /rectangle?width=5&height=3"
-  putStrLn "  POST /add          body: {\"numA\":10,\"numB\":32}"
-  run 8080 app
+    store <- newMVar Nothing
+    putStrLn "Running on http://localhost:8080"
+    putStrLn "  POST /game/start"
+    putStrLn "  GET  /game"
+    putStrLn "  POST /game/action"
+    run 8080 (app store)

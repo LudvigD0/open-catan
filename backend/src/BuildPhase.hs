@@ -1,16 +1,72 @@
 module BuildPhase where 
 
 -- Libs
-import System.IO (hFlush, stdout)
 import qualified Data.Map as Map 
 import Data.Maybe 
-import Text.Read (readMaybe)
+-- import System.IO (hFlush, stdout)
+-- import Text.Read (readMaybe)
 
 -- Local
 import Types
-import Util
 import Catan (getPlayer, lookupNode, lookupEdge, adjacentNodes)
+-- import Util
 
+------------------------------ Resource Checking ----------------------------------------
+-- Checks if the given color (player) has enough resources for settlement
+checkSettlementRes :: GameState -> Color -> Bool
+checkSettlementRes gs color = all (>= 1) [nLumber, nGrain, nBrick, nWool]
+  where
+    res     = resources $ getPlayer color gs 
+    nLumber = res Map.! Lumber
+    nGrain  = res Map.! Grain
+    nBrick  = res Map.! Brick
+    nWool   = res Map.! Wool
+    
+-- Checks if the given color (player) has enough resources for road
+checkRoadRes :: GameState -> Color -> Bool
+checkRoadRes gs color = all (>= 1) [nLumber, nBrick]
+  where
+    res     = resources $ getPlayer color gs
+    nLumber = res Map.! Lumber
+    nBrick  = res Map.! Brick
+
+-- Checks if the given color (player) has enough resources for city
+checkCityRes :: GameState -> Color -> Bool
+checkCityRes gs color = nOre >= 3 && nGrain >= 2
+  where
+    res     = resources $ getPlayer color gs
+    nOre   = res Map.! Ore
+    nGrain = res Map.! Grain
+
+------------------------------ Validity Checks ----------------------------------------
+-- Checks if player has settlement on node
+validCityPlacement :: NodeId -> PlayerId -> Board -> Bool 
+validCityPlacement nid pid brd | isNothing node = False 
+                               | otherwise = case building (fromJust node) of 
+                                            Just (Settlement nodepid) -> pid == nodepid
+                                            _                         -> False 
+ where 
+    node = lookupNode nid brd
+
+-- Checks if node is empty, checks all adjacent nodes within radius 1 
+-- Checks for min 1 road connected to node
+validStlmPlacement :: NodeId -> PlayerId -> Board -> Bool
+validStlmPlacement nid pid brd | isNothing node = False
+                               | otherwise = isNothing (building (fromJust node)) &&                              
+                                all (isNothing . building) (adjacentNodes (fromJust node) brd) &&  
+                                hasConnectingRoad (fromJust node) pid brd 
+ where 
+    node = lookupNode nid brd
+
+-- Checks if player has a road connected to node 
+hasConnectingRoad :: Node -> PlayerId -> Board -> Bool
+hasConnectingRoad node pid brd = any isOwnRoad (nodeEdges node)  
+  where
+    isOwnRoad eid = case road (fromJust $ lookupEdge eid brd) of
+        Just (Road ownerId) -> ownerId == pid
+        Nothing             -> False
+
+------------------------------ Terminal game (not updated for new types) ----------------------------------------
 -- Uses playerInput to place a new settlement, checks res in buildPhase
 -- Adds the settlement to board, player, and removes req resources
 {- placeSettlementIO :: GameState -> Color -> IO GameState
@@ -67,64 +123,3 @@ placeCityIO gs color = do
         pid = playerId $ getPlayer color gs
         newBoard = placeCity nid pid (board gs)
     return gs { board = newBoard } -}
-
-
------------------------------- Resource Checking ----------------------------------------
-
--- Checks if the given color (player) has enough resources for settlement
-checkSettlementRes :: GameState -> Color -> Bool
-checkSettlementRes gs color = all (>= 1) [nLumber, nGrain, nBrick, nWool]
-  where
-    res     = resources $ getPlayer color gs 
-    nLumber = res Map.! Lumber
-    nGrain  = res Map.! Grain
-    nBrick  = res Map.! Brick
-    nWool   = res Map.! Wool
-    
--- Checks if the given color (player) has enough resources for road
-checkRoadRes :: GameState -> Color -> Bool
-checkRoadRes gs color = all (>= 1) [nLumber, nBrick]
-  where
-    res     = resources $ getPlayer color gs
-    nLumber = res Map.! Lumber
-    nBrick  = res Map.! Brick
-
--- Checks if the given color (player) has enough resources for city
-checkCityRes :: GameState -> Color -> Bool
-checkCityRes gs color = nOre >= 3 && nGrain >= 2
-  where
-    res     = resources $ getPlayer color gs
-    nOre   = res Map.! Ore
-    nGrain = res Map.! Grain
-
-
-
-
------------------------------- Validity Checks ----------------------------------------
-
--- Checks if player has settlement on node
-validCityPlacement :: NodeId -> PlayerId -> Board -> Bool 
-validCityPlacement nid pid brd | isNothing node = False 
-                               | otherwise = case building (fromJust node) of 
-                                            Just (Settlement nodepid) -> pid == nodepid
-                                            _                         -> False 
- where 
-    node = lookupNode nid brd
-
--- Checks if node is empty, checks all adjacent nodes within radius 1 
--- Checks for min 1 road connected to node
-validStlmPlacement :: NodeId -> PlayerId -> Board -> Bool
-validStlmPlacement nid pid brd | isNothing node = False
-                               | otherwise = isNothing (building (fromJust node)) &&                              
-                                all (isNothing . building) (adjacentNodes (fromJust node) brd) &&  
-                                hasConnectingRoad (fromJust node) pid brd 
- where 
-    node = lookupNode nid brd
-
--- Checks if player has a road connected to node 
-hasConnectingRoad :: Node -> PlayerId -> Board -> Bool
-hasConnectingRoad node pid brd = any isOwnRoad (nodeEdges node)  
-  where
-    isOwnRoad eid = case road (fromJust $ lookupEdge eid brd) of
-        Just (Road ownerId) -> ownerId == pid
-        Nothing             -> False

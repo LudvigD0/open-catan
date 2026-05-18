@@ -3,18 +3,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Types where 
-import Data.Map (Map, fromList, toList, elems)
+import Data.Map (Map)
 import Data.UUID.Types
-import Data.Word
-import Data.List (nub)
-import Data.Tuple.Extra (both)
 import qualified Data.Aeson as Json
 import           GHC.Generics
 
 -- Board  ======================================================================
 data Cord = Cord Int Int Int 
   deriving (Show, Eq, Ord, Generic, Json.ToJSON, Json.ToJSONKey, Json.FromJSON, Json.FromJSONKey)
-
 
 data Board = Board
   { tiles :: Map Cord Tile
@@ -65,34 +61,46 @@ data Player = Player
   } deriving (Show, Eq, Generic, Json.ToJSON, Json.FromJSON)
 
 -- Game  =======================================================================
-data ServerState = ServerState
-  { activeGames :: [GameState]
-  }
 
 data GameState = GameState
   { gameId      :: Int
   , board       :: Board
   , players     :: Map Color Player
-  , currentTurn :: Color              -- Index of player  
+  , currentTurn :: Color    
+  , turnPhase   :: TurnPhase
   , dice        :: (Int, Int)
   }
   deriving(Eq, Generic, Json.ToJSON, Json.FromJSON) -- do we need "Eq"?
 
+-- API  ================================================================
+-- Updated for GameActions, added to GameState
+data TurnPhase = Roll | Build | GameOver Color 
+ deriving (Show, Eq, Generic, Json.ToJSON, Json.FromJSON)
 
-data TurnPhase = Roll | Build | Trade deriving (Show, Eq, Generic, Json.ToJSON, Json.FromJSON)
-
-data GameAction 
-  = ActNextPhase 
-  | ActBuildRoad Road 
-  | ActBuildBuilding Building
+-- All actions when a game loop is initialized
+data GameAction
+  = ActRollDice
+  | ActBuildRoad EdgeId
+  | ActBuildSettlement NodeId
+  | ActBuildCity NodeId
+  | ActEndTurn
   deriving(Show, Eq, Generic, Json.ToJSON, Json.FromJSON)
+
+--- Errors for the API 
+data GameError
+  = InvalidPhase TurnPhase GameAction
+  | GameNotStarted
+  | InvalidRoadPlacement
+  | InvalidSettlementPlacement
+  | InvalidCityPlacement
+  | InvalidGameAction
+  deriving (Show, Eq, Generic, Json.ToJSON, Json.FromJSON)
 
 -- Socket Data  ================================================================
 data WSMessage 
   = PkgBoardStatus GameState
   | PkgGameAction GameAction
   deriving(Eq, Generic, Json.ToJSON, Json.FromJSON) -- do we need "Eq"?
-
 
 -- Graph Structure  ============================================================
 newtype TileId = TileId Int 
@@ -103,7 +111,6 @@ newtype EdgeId = EdgeId Int
 
 newtype NodeId = NodeId Int 
   deriving (Show, Eq, Ord, Generic, Json.ToJSON, Json.ToJSONKey, Json.FromJSON, Json.FromJSONKey)
-
 
 data Tile = Tile
   { tileId   :: TileId
@@ -126,50 +133,3 @@ data Node = Node
   , nodeEdges :: [EdgeId]
   , nodeTiles :: [TileId]
   } deriving (Eq, Generic, Json.ToJSON, Json.FromJSON)
-
-{-
-instance Show Board where
-  show = (++) " tiles: " . show . map tupleRepl . toList . tiles
-    where
-      tupleRepl (c, t) = (c, tileId t)
-
-instance Show GameState where
-  show gs = "id: " ++ show (gameId gs) ++
-            " players: " ++ show (map shortPlayer (players gs)) ++ 
-            " turn: " ++ show (currentTurn gs) ++ 
-            " phase: " ++ show (phase gs) ++
-            " dice: " ++ diceCase (dice gs)
-    where
-      shortPlayer (c, p) = (c, playerId p)
-      diceCase dices = case dices of
-        (0, 0)   -> "no Dices thrown"
-        (d1, d2) -> show d1 ++ " " ++ show d2
-
-instance Show Player where
-  show p = "id: " ++ show (playerId p) ++
-            " points: " ++ show (points p) ++ 
-            " buildings: " ++ show (map nodeId (buildings p)) ++ 
-            " bridges: " ++ show (map edgeId (roads p)) ++
-            " cards: " ++ show (resourceCards p)
-
-instance Show Node where
-  show n = "id: " ++ show (nodeId n) ++
-            " building: " ++ show (building n) ++ 
-            " near edges: " ++ show (map edgeId (edges n)) ++ 
-            " near tiles: " ++ show (map tileId (nodeTiles n))
-
-instance Show Edge where
-  show e = "id: " ++ show (edgeId e) ++
-            " road: " ++ show (road e) ++ 
-            " path: " ++ show (both nodeId (path e))
-
-
-instance Show Tile where
-  show t = "id: " ++ show (tileId t) ++
-            " resource: " ++ show (resource t) ++ 
-            " token: " ++ show (token t) ++ 
-            " robber: " ++ show (robber t) ++ 
-            " near nodes: " ++ show (map nodeId (nodes t))
-
--}
-

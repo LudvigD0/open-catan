@@ -12,8 +12,9 @@ import BuildPhase
 -- Local
 import Types 
 import Util
-import Catan (initGameState, autoPlace, getPlayer)
+import Catan
 
+------------------------------------------------ Terminal based game (Not updated) ------------------------------------------
 main :: IO ()
 main = do
     start <- randomRIO (0, 3)
@@ -59,17 +60,6 @@ nextPlayer current ps =
         nextIdx     = (currentIdx + 1) `mod` length keys
     in  keys !! nextIdx
     
------------------------------------------------- Initaialization ------------------------------------------------------------------------------
-
-
------
---Init functions are now moved to common/lib
-
----
-
-
-
-
 
 ------------------------------------------------VP Check------------------------------------------------------------------------------
 
@@ -78,11 +68,11 @@ nextPlayer current ps =
 -- Calculates sum of points from only settlements and cities
 -- TODO: Add Longest Road and largest army 
 countVP :: Player -> Board -> Int
-countVP p board =
+countVP p brd =
     sum $ map vpFor buildingsOwned
   where
     buildingsOwned =
-        mapMaybe (`Map.lookup` nodes board) (buildings p)
+        mapMaybe (`Map.lookup` nodes brd) (buildings p)
 
     vpFor node =
         case building node of
@@ -135,7 +125,7 @@ buildPhase gs color = do
     hFlush stdout
     choice <- getLine
     case choice of
-        "1" | checkSettlementRes gs color -> return gs -- placeSettlementIO gs color
+        "1" | checkSettlementRes gs color -> return gs --placeSettlementIO gs color
         "2" | checkRoadRes gs color       -> return gs --placeRoadIO gs color
         "3" | checkCityRes gs color       -> return gs --placeCityIO gs color
         "4"                               -> return gs

@@ -1,46 +1,24 @@
 module Catan where 
 
-import Types
---import Util ()
-import Data.UUID.Types
-import Coordinates
+-- Libs
 import qualified Data.Map as Map 
 import Data.Maybe (maybeToList)
+import Data.UUID.Types
 
-
--- File no longer in use, See backend/Main.hs
-
-{-- 
-
--- MVP 
-
-- Init Game state
-    1. Initialize empty board                 -- Done 
-    2. Initialize Player state                -- Done 
-    3. Auto place first buildings and roads   -- Done
-    4. Random player selected to start        -- Done 
-
-- Turn Loop 
-    5. 2 Dice role - two paths
-    6. Resource distribution
-    7. Building phase  (Road, Settelment, City)
-    8. Check VP >= 10 -> Endgame 
-    9. Next player, repeat from 5 
-
-s--}
-
-
-
+-- Local
+import Coordinates
+import Types
 
 initGameState :: [UUID] -> Int -> GameState
 initGameState ids start =
-    let newPlayers                = map initPlayer ids    -- from Util
+    let newPlayers                = map initPlayer ids 
         colors = [Red, Blue, Orange, White]
     in GameState
         { gameId      = 0
         , board       = catanBoard
         , players     = Map.fromList $ zip colors newPlayers
         , currentTurn = colors !! start 
+        , turnPhase   = Roll
         , dice        = (0, 0)
         }
 
@@ -52,8 +30,6 @@ initPlayer uid = Player
     , roads   = []
     , resources = Map.fromList [(res, 0) | res <- [Lumber, Ore, Grain, Brick, Wool]]
     }
-
-
 
 -- Uses beginnerplacements to add the starting settlements and road for each player
 autoPlace :: GameState -> GameState
@@ -94,9 +70,7 @@ beginnerPlacements =
         ] )
     ]
 
-
-
-
+------------------------------ Util functions ----------------------------------------
 -- Get a node from the board by NodeId
 lookupNode :: NodeId -> Board -> Maybe Node
 lookupNode nid brd = Map.lookup nid (nodes brd)
@@ -127,25 +101,7 @@ adjacentNodes node brd =
                         if n1 == nodeId node then n2 else n1
                 in maybeToList $ Map.lookup other (nodes brd)
 
----------
--- Below is buildState functions that are pure
--- They were moved from backend/src/BuildPhase.hs
-{- The files I am refering to are:
-    placeSettlement
-    placeCity
-    placeRoad
-    addCity
-    addSettlment
-    addRoad
-    addSettlementForced
-    addRoadForced
-
- -}
---------
-
-
 ------------------------------ Board State ----------------------------------------
-
 -- Updates a board node with a new settlement belonging to playerid
 placeSettlement :: NodeId -> PlayerId -> Board -> Board
 placeSettlement nid pid brd =
@@ -184,10 +140,6 @@ addCity color = Map.adjust updatePlayer color
         | res == Grain = amount - 2
         | res == Ore   = amount - 3
         | otherwise    = amount
-
-
-
-
 
 -- Adds nodeId to players buildings and deducts resources for settlement 
 addSettlement :: Color -> NodeId -> Map.Map Color Player -> Map.Map Color Player
