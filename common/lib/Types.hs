@@ -19,11 +19,6 @@ data Board = Board
   }
   deriving(Eq, Generic, ToJSON, FromJSON)
 
-data Action
-  = NoOp
-  | ClickHex
-  | ClickNode NodeId
-  deriving (Show, Eq)
 
 -- Catan types =================================================================
 data Color 
@@ -70,7 +65,7 @@ data GameState = GameState
   , turnPhase   :: TurnPhase
   , dice        :: (Int, Int)
   }
-  deriving(Eq, Generic, ToJSON, FromJSON) -- do we need "Eq"?
+  deriving(Eq, Generic, ToJSON, FromJSON) -- do we need "Eq"? For now, Yes
 
 -- API  ================================================================
 -- Updated for GameActions, added to GameState
@@ -100,7 +95,7 @@ data GameError
 data WSMessage 
   = PkgBoardStatus GameState
   | PkgGameAction GameAction
-  deriving(Eq, Generic, ToJSON, FromJSON) -- do we need "Eq"?
+  deriving(Eq, Generic, ToJSON, FromJSON) -- do we need "Eq"? -- For now, yes
 
 -- Graph Structure  ============================================================
 newtype TileId = TileId Int 
@@ -133,3 +128,9 @@ data Node = Node
   , nodeEdges :: [EdgeId]
   , nodeTiles :: [TileId]
   } deriving (Eq, Generic, ToJSON, FromJSON)
+
+
+data ServerState = ServerState
+  { activeGames :: [GameState]
+  } deriving Eq
+  

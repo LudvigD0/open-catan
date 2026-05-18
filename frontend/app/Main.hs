@@ -17,7 +17,8 @@ import Miso.Html.Property (className, id_)
 
 import BoardView
 import Types
---import Catan
+import ClientTypes
+import Catan (autoPlace, initGameState)
 
 import Data.UUID.Types (UUID, fromWords)
 --import Data.UUID (UUID)
@@ -47,16 +48,17 @@ foreign export javascript "hs_start" main :: IO ()
 #endif
 ----------------------------------------------------------------------------
 -- | `component` takes as arguments the initial model, update function, view function
-app :: App () Action
-app = component () updateModel viewModel
+app :: App Model Action
+app = component initialModel updateModel viewModel
 
 
 ----------------------------------------------------------------------------
 -- | Updates model, optionally introduces side effects
-updateModel :: Action -> Effect parent () Action
+updateModel :: Action -> Effect parent Model Action
 updateModel NoOp = pure ()
 updateModel ClickHex = pure ()
 updateModel (ClickNode _) = pure ()
+updateModel (ClickEdge _) = pure ()
 
 
 --------------------------- helpers
@@ -85,6 +87,18 @@ uuids =
   , fromWords 0xf47ac10b 0x58cc4372 0xa5670e02 0xb2c3d479
   ]
 
+initialGameState :: GameState
+initialGameState =
+  autoPlace (initGameState uuids 0)
+
+
+initialModel :: Model
+initialModel = Model
+  { gameState = initialGameState
+  , selectedNode = Nothing
+  , selectedEdge = Nothing
+  }
+
 --gameState :: IO GameState
 --gameState = initGameState uuids
 
@@ -93,19 +107,19 @@ uuids =
 
 
 
---- model är wrappern till allt typ
-viewModel :: () -> View () Action
-viewModel _ =
+--- model fungerar som wrappern för allt den ritar ut (body ungefär)
+viewModel :: Model -> View Model Action
+viewModel appModel =
   H.div_
     [ id_ "container", className "container" ]
     [ viewWater
     , viewSand
-    , viewBoard
+    , viewBoard (gameState appModel)
     ]
   
     
 ----------------
-viewSand :: View () Action
+viewSand :: View Model Action
 viewSand = 
   H.img_
     [ className "sand-background"
@@ -113,7 +127,7 @@ viewSand =
     , HP.alt_ "Sand background"
     ]
 
-viewWater :: View () Action
+viewWater :: View Model Action
 viewWater = 
   H.img_
     [ className "water-background"

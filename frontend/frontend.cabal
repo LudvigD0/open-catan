@@ -90,6 +90,7 @@ executable frontend
                       containers
 
     other-modules:    BoardView
+                      ClientTypes
     
 
     -- Directories containing source files.
