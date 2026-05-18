@@ -134,3 +134,13 @@ data ServerState = ServerState
   { activeGames :: [GameState]
   } deriving Eq
   
+
+-------------- Viktor, jag flyttade Gameresponse då jag behöver den också
+
+-- Respose which represent successful or failed request
+data GameResponse
+  = GameStateResponse GameState
+  | GameErrorResponse GameError
+  deriving (Eq, Generic)
+
+instance FromJSON GameResponse

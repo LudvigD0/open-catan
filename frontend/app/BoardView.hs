@@ -46,6 +46,16 @@ houseImage color = ms ("/static/houses/house-" ++ assetColorName color ++ ".png"
 edgeImage :: Color -> MisoString
 edgeImage color = ms ("/static/edges/edge-" ++ assetColorName color ++ ".png")
 
+tileImage :: Tile -> MisoString
+tileImage tile =
+  case resource tile of
+    Nothing     -> "/static/desert.png"
+    Just Lumber -> "/static/wood.png"
+    Just Ore    -> "/static/ore.png"
+    Just Grain  -> "/static/wheat.png"
+    Just Brick  -> "/static/brick.png"
+    Just Wool   -> "/static/sheep.png"
+
 defaultHouseImage :: MisoString
 defaultHouseImage = ms ("/static/houses/house-white.png" :: String)
 
@@ -141,7 +151,8 @@ uniqueNodePositions size =
 viewNodeSlot :: (Int, (Double, Double)) -> View Model Action
 viewNodeSlot (nid, (x, y)) =
   H.div_
-    [ CSS.style_
+    [ className "clickable-node"
+    , CSS.style_
         [ CSS.position "absolute"
         , CSS.left (px (x - 10))
         , CSS.top  (px (y - 10))
@@ -149,7 +160,6 @@ viewNodeSlot (nid, (x, y)) =
         , CSS.height "20px"
         , CSS.borderRadius "50%"
         , CSS.cursor "pointer"
-        , CSS.backgroundColor (CSS.RGBA 255 255 255 0.2)
         , CSS.border "1px solid rgba(255,255,255,0.55)"
         , CSS.zIndex "20"
         ]
@@ -189,7 +199,7 @@ viewBuilding gs (nid, (x, y)) = do
 -- Klickbar plats for en edge
 viewEdgeSlot :: (Int, ((Double, Double), (Double, Double))) -> View Model Action
 viewEdgeSlot (eid, endpoints) =
-  viewEdgeShape endpoints 18 (CSS.RGBA 255 255 255 0.1) "15" (ClickEdge (EdgeId eid))
+  viewEdgeShape endpoints 18 "15" (ClickEdge (EdgeId eid))
 
 -- En riktig väg från gamestate
 viewRoad :: GameState -> (Int, ((Double, Double), (Double, Double))) -> Maybe (View Model Action)
@@ -238,11 +248,10 @@ viewRoadImage ((x1, y1), (x2, y2)) imageSrc z action =
 viewEdgeShape ::
   ((Double, Double), (Double, Double)) ->
   Double ->
-  CSS.Color ->
   MisoString ->
   Action ->
   View Model Action
-viewEdgeShape ((x1, y1), (x2, y2)) height bg z action =
+viewEdgeShape ((x1, y1), (x2, y2)) height z action =
   let dx = x2 - x1
       dy = y2 - y1
 
@@ -254,13 +263,13 @@ viewEdgeShape ((x1, y1), (x2, y2)) height bg z action =
       angle = atan2 dy dx
   in
     H.div_
-      [ CSS.style_
+      [ className "clickable-edge"
+      , CSS.style_
           [ CSS.position "absolute"
           , CSS.left (px (midX - edgeLength / 2))
           , CSS.top  (px (midY - height / 2))
           , CSS.width  (px edgeLength)
           , CSS.height (px height)
-          , CSS.backgroundColor bg
           , CSS.borderRadius "999px"
           , CSS.cursor "pointer"
           , CSS.transform (ms ("rotate(" ++ show angle ++ "rad)"))
@@ -272,9 +281,17 @@ viewEdgeShape ((x1, y1), (x2, y2)) height bg z action =
       []
   
 
-viewHex :: Cord -> View Model Action
-viewHex hex =
+viewHex :: (Cord, Tile) -> View Model Action
+viewHex (hex, tile) =
   let xy = hexTopLeft 80 hex -- xy kordinaten längst upp till vänster
+      tokenView =
+        if token tile == 0
+          then []
+          else
+            [ H.div_
+                [ className "tile-token" ]
+                [ text (ms (show (token tile))) ]
+            ]
   in
     H.div_
       [ CSS.style_ 
@@ -286,9 +303,9 @@ viewHex hex =
           , CSS.height "160px"
         ]
       ]
-      [
+      ([
         H.img_
-        [ HP.src_ "/static/desert.png"
+        [ HP.src_ (tileImage tile)
           , HP.alt_ "Tile image"
           , CSS.style_
             [ CSS.width "129.9px"
@@ -299,7 +316,7 @@ viewHex hex =
             , CSS.transform "translate(-50%, -50%)"
             ]
         ]
-      ]
+      ] ++ tokenView)
 
     
 
@@ -307,7 +324,7 @@ viewHex hex =
 viewBoard :: GameState -> View Model Action
 viewBoard gs =
   let size = 80
-      hexViews  = map viewHex visualCatanCords  --catanCords
+      hexViews = map viewHex (Map.toList (tiles (board gs)))
       edgePos = edgePositions size
       nodePos = uniqueNodePositions size
       edgeSlotViews = map viewEdgeSlot edgePos

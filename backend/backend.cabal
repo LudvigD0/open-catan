@@ -150,6 +150,7 @@ executable api
         , servant
         , servant-server
         , warp
+        , wai-cors
         , text
         , common
         , random

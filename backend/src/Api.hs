@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Main where
@@ -10,17 +11,15 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (ToJSON)
 import GHC.Generics (Generic)
 import Network.Wai.Handler.Warp (run)
+import Network.Wai.Middleware.Cors
 import Servant
 
 -- Local
 import GameActions
 import Types
 
--- Respose which represent successful or failed request
-data GameResponse
-  = GameStateResponse GameState
-  | GameErrorResponse GameError
-  deriving (Generic)
+
+
 
 instance ToJSON GameResponse
 
@@ -80,8 +79,15 @@ server store =
 api :: Proxy API
 api = Proxy
 
+corsPolicy :: CorsResourcePolicy
+corsPolicy = simpleCorsResourcePolicy
+    { corsOrigins = Just (["http://127.0.0.1:8081", "http://localhost:8081"], True)
+    , corsMethods = ["GET", "POST", "OPTIONS"]
+    , corsRequestHeaders = ["Content-Type"]
+    }
+
 app :: GameStore -> Application
-app store = serve api (server store)
+app store = cors (const $ Just corsPolicy) $ serve api (server store)
 
 main :: IO ()
 main = do

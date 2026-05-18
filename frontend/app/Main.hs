@@ -13,23 +13,13 @@ module Main where
 import Miso
 import qualified Miso.Html.Element as H
 import qualified Miso.Html.Property as HP
+import Miso.Html.Event (onClick)
 import Miso.Html.Property (className, id_)
 
+import Api
 import BoardView
 import Types
 import ClientTypes
-import Catan (autoPlace, initGameState)
-
-import Data.UUID.Types (UUID, fromWords)
---import Data.UUID (UUID)
---import qualified Data.UUID as UUID
-
-
-
-
-
-{- import qualified Miso.Html.Element as H
- -}
 
 
 
@@ -57,55 +47,60 @@ app = component initialModel updateModel viewModel
 updateModel :: Action -> Effect parent Model Action
 updateModel NoOp = pure ()
 updateModel ClickHex = pure ()
-updateModel (ClickNode _) = pure ()
-updateModel (ClickEdge _) = pure ()
 
+updateModel ClickStart = do
+  appModel <- get
+  put appModel { requestStatus = Loading "Starting game..." }
+  requestStartGame
 
---------------------------- helpers
---data Hex = Hex Int Int Int
---  deriving (Show, Eq, Ord)
+updateModel (ClickNode nid) = do
+  appModel <- get
+  put appModel
+    { selectedNode = Just nid
+    , requestStatus = Loading "Sending settlement action..."
+    }
+  requestGameAction (ActBuildSettlement nid)
 
--- Board hexes ska antagligen bort eftersom att vi redan skapar board i Cordinates
+updateModel (ClickEdge eid) = do
+  appModel <- get
+  put appModel
+    { selectedEdge = Just eid
+    , requestStatus = Loading "Sending road action..."
+    }
+  requestGameAction (ActBuildRoad eid)
 
+updateModel ClickRollDice = do
+  appModel <- get
+  put appModel { requestStatus = Loading "Rolling dice..." }
+  requestGameAction ActRollDice
 
+updateModel ClickEndTurn = do
+  appModel <- get
+  put appModel { requestStatus = Loading "Ending turn..." }
+  requestGameAction ActEndTurn
 
-
---nodePosition :: 
-
---edgePosition :: 
-
-
-
-
-
-
-uuids :: [UUID]
-uuids =
-  [ fromWords 0x550e8400 0xe29b41d4 0xa7164466 0x55440000
-  , fromWords 0x6ba7b810 0x9dad11d1 0x80b400c0 0x4fd430c8
-  , fromWords 0x123e4567 0xe89b12d3 0xa4564266 0x14174000
-  , fromWords 0xf47ac10b 0x58cc4372 0xa5670e02 0xb2c3d479
-  ]
-
-initialGameState :: GameState
-initialGameState =
-  autoPlace (initGameState uuids 0)
-
+updateModel (GotGameResponse response) = do
+  appModel <- get
+  case response of
+    GameStateResponse gs ->
+      put appModel
+        { gameState = Just gs
+        , requestStatus = Idle
+        }
+    GameErrorResponse err ->
+      put appModel { requestStatus = ServerRejected err }
+      
+updateModel (ApiRequestFailed message) = do
+  appModel <- get
+  put appModel { requestStatus = RequestFailed message }
 
 initialModel :: Model
 initialModel = Model
-  { gameState = initialGameState
+  { gameState = Nothing
   , selectedNode = Nothing
   , selectedEdge = Nothing
+  , requestStatus = Idle
   }
-
---gameState :: IO GameState
---gameState = initGameState uuids
-
-
-
-
-
 
 --- model fungerar som wrappern för allt den ritar ut (body ungefär)
 viewModel :: Model -> View Model Action
@@ -114,8 +109,80 @@ viewModel appModel =
     [ id_ "container", className "container" ]
     [ viewWater
     , viewSand
-    , viewBoard (gameState appModel)
+    , viewGame appModel
     ]
+
+viewGame :: Model -> View Model Action
+viewGame appModel =
+  case gameState appModel of
+    Nothing -> viewStartMenu appModel
+    Just gs ->
+      H.div_
+        []
+        [ viewTopMenu appModel gs
+        , viewBoard gs
+        ]
+
+viewStartMenu :: Model -> View Model Action
+viewStartMenu appModel =
+  H.div_
+    [ className "start-menu" ]
+    [ H.h1_ [] [ text "Open Catan" ]
+    , H.button_
+        [ className "start-button"
+        , onClick ClickStart
+        ]
+        [ text "Start" ]
+    , viewRequestStatus appModel
+    ]
+
+viewTopMenu :: Model -> GameState -> View Model Action
+viewTopMenu appModel gs =
+  H.div_
+    [ className "top-menu" ]
+    (rollButton ++
+    [ H.button_
+        [ className "menu-button"
+        , onClick ClickEndTurn
+        ]
+        [ text "End turn" ]
+    , H.span_
+        [ className "turn-status" ]
+        [ text ("Turn: " <> ms (show (currentTurn gs)) <> " / " <> ms (show (turnPhase gs))) ]
+    , viewDice gs
+    , viewRequestStatus appModel
+    ])
+  where
+    rollButton =
+      case turnPhase gs of
+        Roll ->
+          [ H.button_
+              [ className "menu-button"
+              , onClick ClickRollDice
+              ]
+              [ text "Roll" ]
+          ]
+        _ -> []
+
+viewDice :: GameState -> View Model Action
+viewDice gs =
+  case dice gs of
+    (0, 0) -> H.span_ [ className "dice-status" ] []
+    (d1, d2) ->
+      H.span_
+        [ className "dice-status" ]
+        [ text ("Dice: " <> ms (show d1) <> " + " <> ms (show d2) <> " = " <> ms (show (d1 + d2))) ]
+
+viewRequestStatus :: Model -> View Model Action
+viewRequestStatus appModel =
+  case requestStatus appModel of
+    Idle -> H.span_ [ className "request-status" ] []
+    Loading message ->
+      H.span_ [ className "request-status" ] [ text message ]
+    RequestFailed message ->
+      H.span_ [ className "request-status request-status-error" ] [ text message ]
+    ServerRejected err ->
+      H.span_ [ className "request-status request-status-error" ] [ text (ms (show err)) ]
   
     
 ----------------
