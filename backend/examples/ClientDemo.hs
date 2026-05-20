@@ -6,12 +6,9 @@ module Main
     ( main
     ) where
 
+import qualified WebSocket as OCWS -- Our module (Open Catan Web Socket)
+import qualified Types as OCTypes
 import           Data.Aeson
-import           GHC.Generics
-
-import qualified Data.ByteString.Lazy.Char8 as LC8
-import           Foobar
-
 import           Control.Concurrent  (forkIO)
 import           Control.Monad       (forever, unless)
 import           Control.Monad.Trans (liftIO)
@@ -19,38 +16,19 @@ import           Network.Socket      (withSocketsDo)
 import           Data.Text           (Text)
 import qualified Data.Text           as T
 import qualified Data.Text.IO        as T
+-- Direct access to the internal websockets functions.
+-- Should be replaced with our WebSockets eventually.
+-- Currently used for applying settings, sending/receiving messages 
+-- and keeping the connection alive.
 import qualified Network.WebSockets  as WS
---import           WebSocket  -- our module
 
--- !!!
--- Until I've worked out how cabal wants you to define local modules and imports
-
--- Constants ===================================================================
--- From "server":   ws://localhost:9160
-c_localHost :: String
-c_localHost = "0.0.0.0"
-c_localPort :: Int
-c_localPort = 9160
-c_localPath :: String
-c_localPath = "/"
-
--- Client ======================================================================
-runLocalClient :: WS.ClientApp a -> IO a
-runLocalClient = WS.runClient c_localHost c_localPort c_localPath
-
-runLocalClientWith :: WS.ConnectionOptions
-                   -> WS.Headers
-                   -> WS.ClientApp a
-                   -> IO a
-runLocalClientWith = WS.runClientWith c_localHost c_localPort c_localPath
 
 -- MAIN CONTENT ================================================================
 -- =============================================================================
 
-
 main :: IO ()
 main = withSocketsDo $ 
-  runLocalClientWith
+  OCWS.runLocalClientWith
     WS.defaultConnectionOptions {
       WS.connectionStrictUnicode = True,
       WS.connectionFramePayloadSizeLimit = WS.NoSizeLimit
@@ -59,14 +37,23 @@ main = withSocketsDo $
     [] 
     app_demo
 
+-- data WSMessage 
+--   = PkgBoardStatus GameState
+--   | PkgGameAction GameAction
+
+sendEncodedPackage :: WS.Connection -> OCTypes.WSMessage -> IO()
+sendEncodedPackage conn wsMsg = WS.sendTextData conn $ encode wsMsg
+
 app_demo :: WS.ClientApp ()
 app_demo conn = do
     putStrLn "Connected!"
 
-    WS.sendTextData conn $ encode (Person {name = "Joe", age = 12})
-    -- WS.sendTextData conn (encode Bishop)
-    -- WS.sendTextData conn (encode [Bishop, Knight])
-
+    sendEncodedPackage conn $ OCTypes.PkgGameAction OCTypes.ActRollDice
+    sendEncodedPackage conn $ OCTypes.PkgGameAction (OCTypes.ActBuildRoad (OCTypes.EdgeId 10))
+    sendEncodedPackage conn $ OCTypes.PkgGameAction (OCTypes.ActBuildCity (OCTypes.NodeId 20))
+    sendEncodedPackage conn $ OCTypes.PkgGameAction (OCTypes.ActBuildSettlement (OCTypes.NodeId 30))
+    sendEncodedPackage conn $ OCTypes.PkgGameAction OCTypes.ActEndTurn
+    
     -- Fork a thread that writes WS data to stdout
     _ <- forkIO $ forever $ do
         msg <- WS.receiveData conn

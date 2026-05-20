@@ -1,4 +1,6 @@
-
-{-State för aktiva matchar, lobbies, connections-}
+module State () where
+{-
+  State för aktiva matchar, lobbies, connections
+-}
 
 

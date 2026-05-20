@@ -53,6 +53,46 @@ extra-doc-files:    CHANGELOG.md
 common warnings
     ghc-options: -Wall
 
+library
+    -- Import common warning flags.
+    import:           warnings
+    -- Base language which the package is written in.
+    default-language: Haskell2010
+
+    -- Directories containing source files.
+    hs-source-dirs:   src
+
+    -- Modules exported by the library.
+    exposed-modules:
+        Lobby
+        State
+        WebSocket
+    
+    -- Modules included in this library but not exported.
+    other-modules:
+        BuildPhase
+        Util
+
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+
+    -- Other library packages from which modules are imported.
+    build-depends:
+        base ^>=4.18.3.0,
+        text,
+        bytestring,
+        websockets,
+        aeson ^>=2.2.4.1,
+    -- backend
+        common,
+        containers,
+        uuid,
+        uuid-types,
+        random,
+    
+
+
+
 executable backend
     -- Import common warning flags.
     import:           warnings
@@ -68,9 +108,8 @@ executable backend
 
     -- Other library packages from which modules are imported.
     build-depends:    
-        base ^>=4.18.3.0,
-        websockets,
-        text,
+        backend, 
+        base ^>=4.18.3.0, 
         containers,   
         random,
         uuid,
@@ -101,17 +140,20 @@ executable demo-server
 
     -- Other library packages from which modules are imported.
     build-depends:    
-        base ^>=4.18.3.0,
-        websockets,
-        text,
-        foobar,
-        aeson ^>=2.2.3.0,
+        -- our library
+        backend, 
+        common,
+        -- in lib
+        base ^>=4.18.3.0, 
+        aeson ^>=2.2.3.0, 
+        text, 
         bytestring,
-        -- backend -- use this instead of websocket (our) directly.
-        -- WebSocket
+        -- temp inclusion
+        websockets,     
+
 
     -- Directories containing source files.
-    hs-source-dirs:   examples src
+    hs-source-dirs:     examples 
 
     -- Base language which the package is written in.
     default-language: Haskell2010
@@ -124,17 +166,20 @@ executable demo-client
     import:             warnings
     main-is:            ClientDemo.hs
     build-depends:
-        base ^>=4.18.3.0,
-        websockets,
-        text,
+        -- our library
+        backend,
+        common,
         network,
         mtl,
-        foobar,
-        aeson ^>=2.2.3.0,
-        bytestring,
+        -- in lib
+        base ^>=4.18.3.0, 
+        websockets, 
+        text, 
+        aeson ^>=2.2.3.0, 
+        bytestring, 
     
     -- Directories containing source files.
-    hs-source-dirs:     examples src
+    hs-source-dirs:     examples 
 
     -- Base language which the package is written in.
     default-language:   Haskell2010
