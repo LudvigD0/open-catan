@@ -24,5 +24,9 @@ clean:
 	cd $(ROOT) && rm -rf dist-newstyle
 
 refresh: 
-	make build
-	make serve
+	$(MAKE) build
+	$(MAKE) serve
+
+
+nix-refresh:
+	cd $(ROOT) && nix --extra-experimental-features "nix-command flakes" develop .#wasm --command make -C frontend refresh
