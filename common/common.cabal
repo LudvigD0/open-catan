@@ -102,8 +102,11 @@ test-suite common-test
 
     -- Directories containing source files.
     hs-source-dirs:   test
+                      ../backend/src
 
-    other-modules:    TestJsonConversions
+    other-modules:    BuildPhase
+                      TestJsonConversions
+                      TestPlacementValidation
 
     -- The entrypoint to the test suite.
     main-is:          Main.hs
@@ -112,4 +115,6 @@ test-suite common-test
     build-depends:
         base ^>=4.18.3.0,
         common,
-        aeson ^>=2.2.4.1
+        aeson ^>=2.2.4.1,
+        containers,
+        uuid-types

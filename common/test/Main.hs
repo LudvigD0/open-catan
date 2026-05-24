@@ -1,6 +1,19 @@
 module Main (main) where
 
-import TestJsonConversions
+import System.Exit (exitFailure)
+
+import qualified TestPlacementValidation
 
 main :: IO ()
-main = putStrLn "Test suite not yet implemented."
+main = do
+    let failedTests =
+            [ name
+            | (name, passed) <- TestPlacementValidation.tests
+            , not passed
+            ]
+    if null failedTests
+        then putStrLn "All placement validation tests passed."
+        else do
+            putStrLn "Placement validation tests failed:"
+            mapM_ (putStrLn . ("  - " ++)) failedTests
+            exitFailure

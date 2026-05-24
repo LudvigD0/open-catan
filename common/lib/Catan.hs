@@ -87,7 +87,6 @@ lookupTile crd brd = Map.lookup crd (tiles brd)
 getPlayer :: Color -> GameState -> Player
 getPlayer color gs = (players gs) Map.! color 
 
--- 
 adjacentNodes :: Node -> Board -> [Node]
 adjacentNodes node brd =
     concatMap edgeNeighbors (nodeEdges node)
@@ -97,9 +96,11 @@ adjacentNodes node brd =
             Nothing -> []
             Just edge ->
                 let (n1, n2) = edgeNodes edge
-                    other =
-                        if n1 == nodeId node then n2 else n1
-                in maybeToList $ Map.lookup other (nodes brd)
+                    other
+                        | n1 == nodeId node = Just n2
+                        | n2 == nodeId node = Just n1
+                        | otherwise         = Nothing
+                in maybe [] (\nid -> maybeToList $ lookupNode nid brd) other
 
 ------------------------------ Board State ----------------------------------------
 -- Updates a board node with a new settlement belonging to playerid

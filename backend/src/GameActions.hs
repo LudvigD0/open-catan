@@ -26,6 +26,7 @@ startGame = autoPlace (initGameState someUUIDs 0)
    - If corresponding function for GameAction is successfull, returns new gamestate
    - Otherwise returns Nothing, and returns an InvalidAction
  -}
+
 applyGameAction :: GameAction -> GameState -> IO (Either GameError GameState)
 applyGameAction ga gs =
     case ga of
@@ -84,13 +85,38 @@ buildRoad eid gs =
         Just edge
             | isJust (road edge) -> Nothing
             | not (checkRoadRes gs color) -> Nothing
+            | not (validRoadPlacement edge pid (board gs)) -> Nothing
             | otherwise ->
-                let pid = playerId $ getPlayer color gs
-                    newBoard = placeRoad eid pid (board gs)
+                let newBoard = placeRoad eid pid (board gs)
                     newPlayers = addRoad color eid (players gs)
                 in Just gs { board = newBoard, players = newPlayers }
   where
     color = currentTurn gs
+    pid = playerId $ getPlayer color gs
+
+-- Checks that an edge is connected to the player's existing road network.
+-- A road may start from one of the player's buildings or extend from one of
+-- their roads touching either endpoint of the chosen edge.
+validRoadPlacement :: Edge -> PlayerId -> Board -> Bool
+validRoadPlacement edge pid brd =
+    any hasOwnBuilding endpointNodes || any hasOwnRoad adjacentEdgeIds
+  where
+    (n1, n2) = edgeNodes edge
+    endpointNodes = map (`lookupNode` brd) [n1, n2]
+    adjacentEdgeIds =
+        concatMap (maybe [] nodeEdges) endpointNodes
+
+    hasOwnBuilding (Just node) =
+        case building node of
+            Just (Settlement ownerId) -> ownerId == pid
+            Just (City ownerId)       -> ownerId == pid
+            Nothing                   -> False
+    hasOwnBuilding Nothing = False
+
+    hasOwnRoad eid =
+        case road =<< lookupEdge eid brd of
+            Just (Road ownerId) -> ownerId == pid
+            Nothing             -> False
 
 -- Checks for valid nodeid, resources, then adds to board and player state. Otherwise returns Nothing 
 buildSettlement :: NodeId -> GameState -> Maybe GameState

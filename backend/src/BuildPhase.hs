@@ -41,28 +41,26 @@ checkCityRes gs color = nOre >= 3 && nGrain >= 2
 ------------------------------ Validity Checks ----------------------------------------
 -- Checks if player has settlement on node
 validCityPlacement :: NodeId -> PlayerId -> Board -> Bool 
-validCityPlacement nid pid brd | isNothing node = False 
-                               | otherwise = case building (fromJust node) of 
-                                            Just (Settlement nodepid) -> pid == nodepid
-                                            _                         -> False 
- where 
-    node = lookupNode nid brd
+validCityPlacement nid pid brd = case building =<< lookupNode nid brd of 
+                                    Just (Settlement nodepid) -> pid == nodepid
+                                    _                         -> False 
 
--- Checks if node is empty, checks all adjacent nodes within radius 1 
--- Checks for min 1 road connected to node
+-- Checks if node is empty, all nodes within one edge are empty,
+-- and the player has at least one road connected to the node.
 validStlmPlacement :: NodeId -> PlayerId -> Board -> Bool
-validStlmPlacement nid pid brd | isNothing node = False
-                               | otherwise = isNothing (building (fromJust node)) &&                              
-                                all (isNothing . building) (adjacentNodes (fromJust node) brd) &&  
-                                hasConnectingRoad (fromJust node) pid brd 
- where 
-    node = lookupNode nid brd
+validStlmPlacement nid pid brd =
+    maybe False canBuildSettlement (lookupNode nid brd)
+  where
+    canBuildSettlement node =
+        isNothing (building node) &&
+        all (isNothing . building) (adjacentNodes node brd) &&
+        hasConnectingRoad node pid brd
 
 -- Checks if player has a road connected to node 
 hasConnectingRoad :: Node -> PlayerId -> Board -> Bool
 hasConnectingRoad node pid brd = any isOwnRoad (nodeEdges node)  
   where
-    isOwnRoad eid = case road (fromJust $ lookupEdge eid brd) of
+    isOwnRoad eid = case road =<< lookupEdge eid brd of
         Just (Road ownerId) -> ownerId == pid
         Nothing             -> False
 
