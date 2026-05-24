@@ -16,6 +16,8 @@ import qualified Miso.Html.Property as HP
 import Miso.Html.Event (onClick)
 import Miso.Html.Property (className, id_)
 
+import qualified Data.Map as Map
+
 import Api
 import BoardView
 import Types
@@ -43,7 +45,7 @@ app = component initialModel updateModel viewModel
 
 
 ----------------------------------------------------------------------------
--- | Updates model, optionally introduces side effects
+-- | Updates model
 updateModel :: Action -> Effect parent Model Action
 updateModel NoOp = pure ()
 updateModel ClickHex = pure ()
@@ -55,11 +57,20 @@ updateModel ClickStart = do
 
 updateModel (ClickNode nid) = do
   appModel <- get
+  let action =
+        case gameState appModel of
+          Just gs
+            | nodeHasBuilding nid gs -> ActBuildCity nid
+          _ -> ActBuildSettlement nid
+      requestMessage =
+        case action of
+          ActBuildCity _ -> "Sending city action..."
+          _              -> "Sending settlement action..."
   put appModel
     { selectedNode = Just nid
-    , requestStatus = Loading "Sending settlement action..."
+    , requestStatus = Loading requestMessage
     }
-  requestGameAction (ActBuildSettlement nid)
+  requestGameAction action
 
 updateModel (ClickEdge eid) = do
   appModel <- get
@@ -94,6 +105,14 @@ updateModel (ApiRequestFailed message) = do
   appModel <- get
   put appModel { requestStatus = RequestFailed message }
 
+nodeHasBuilding :: NodeId -> GameState -> Bool
+nodeHasBuilding nid gs =
+  case Map.lookup nid (nodes (board gs)) of
+    Just boardNode -> case building boardNode of
+      Just _  -> True
+      Nothing -> False
+    Nothing -> False
+
 initialModel :: Model
 initialModel = Model
   { gameState = Nothing
@@ -121,6 +140,8 @@ viewGame appModel =
         []
         [ viewTopMenu appModel gs
         , viewBoard gs
+        , viewDice gs
+        , viewResourcePanel gs
         ]
 
 viewStartMenu :: Model -> View Model Action
@@ -149,7 +170,6 @@ viewTopMenu appModel gs =
     , H.span_
         [ className "turn-status" ]
         [ text ("Turn: " <> ms (show (currentTurn gs)) <> " / " <> ms (show (turnPhase gs))) ]
-    , viewDice gs
     , viewRequestStatus appModel
     ])
   where
@@ -167,11 +187,21 @@ viewTopMenu appModel gs =
 viewDice :: GameState -> View Model Action
 viewDice gs =
   case dice gs of
-    (0, 0) -> H.span_ [ className "dice-status" ] []
+    (0, 0) -> H.div_ [ className "dice-display dice-display-empty" ] []
     (d1, d2) ->
-      H.span_
-        [ className "dice-status" ]
-        [ text ("Dice: " <> ms (show d1) <> " + " <> ms (show d2) <> " = " <> ms (show (d1 + d2))) ]
+      H.div_
+        [ className "dice-display" ]
+        [ viewDiceImage d1
+        , viewDiceImage d2
+        ]
+
+viewDiceImage :: Int -> View Model Action
+viewDiceImage value =
+  H.img_
+    [ className "dice-image"
+    , HP.src_ (ms ("/static/dice/" ++ show value ++ ".png"))
+    , HP.alt_ (ms ("Dice " ++ show value))
+    ]
 
 viewRequestStatus :: Model -> View Model Action
 viewRequestStatus appModel =
@@ -183,6 +213,68 @@ viewRequestStatus appModel =
       H.span_ [ className "request-status request-status-error" ] [ text message ]
     ServerRejected err ->
       H.span_ [ className "request-status request-status-error" ] [ text (ms (show err)) ]
+
+viewResourcePanel :: GameState -> View Model Action
+viewResourcePanel gs =
+  H.div_
+    [ className "resource-panel" ]
+    (map (viewPlayerResources gs) playerColors)
+
+viewPlayerResources :: GameState -> Color -> View Model Action
+viewPlayerResources gs color =
+  let playerResources =
+        case Map.lookup color (players gs) of
+          Just player -> resources player
+          Nothing     -> Map.empty
+  in
+    H.div_
+      [ className ("resource-player resource-player-" <> colorClass color) ]
+      (map (viewResourceCard playerResources) resourceOrder)
+
+viewResourceCard :: Map.Map Resource Int -> Resource -> View Model Action
+viewResourceCard playerResources res =
+  H.div_
+    [ className "resource-card" ]
+    [ H.img_
+        [ HP.src_ (resourceCardImage res)
+        , HP.alt_ (resourceName res)
+        ]
+    , H.span_
+        [ className "resource-count" ]
+        [ text (ms (show (Map.findWithDefault 0 res playerResources))) ]
+    ]
+
+playerColors :: [Color]
+playerColors = [Red, Blue, Orange, White]
+
+resourceOrder :: [Resource]
+resourceOrder = [Lumber, Ore, Grain, Brick, Wool]
+
+colorClass :: Color -> MisoString
+colorClass color =
+  case color of
+    Red    -> "red"
+    Blue   -> "blue"
+    Orange -> "orange"
+    White  -> "white"
+
+resourceCardImage :: Resource -> MisoString
+resourceCardImage res =
+  case res of
+    Lumber -> "/static/cards/card-wood.png"
+    Ore    -> "/static/cards/card-ore.png"
+    Grain  -> "/static/cards/card-wheat.png"
+    Brick  -> "/static/cards/card-brick.png"
+    Wool   -> "/static/cards/card-sheep.png"
+
+resourceName :: Resource -> MisoString
+resourceName res =
+  case res of
+    Lumber -> "Wood"
+    Ore    -> "Ore"
+    Grain  -> "Wheat"
+    Brick  -> "Brick"
+    Wool   -> "Sheep"
   
     
 ----------------

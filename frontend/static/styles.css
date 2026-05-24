@@ -118,22 +118,107 @@ body {
 }
 
 .turn-status,
-.dice-status,
 .request-status {
-    background: rgba(25, 34, 42, 0.72);
+    background: rgba(0, 0, 0, 0.7);
     border-radius: 4px;
     padding: 6px 10px;
     font-size: 14px;
 }
 
-.dice-status:empty,
 .request-status:empty {
     display: none;
 }
 
 .request-status-error {
-    color: #ffd0ca;
+    color: #ff5454;
 }
+
+.dice-display {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 65;
+    display: flex;
+    gap: 16px;
+    pointer-events: none;
+}
+
+.dice-display-empty {
+    display: none;
+}
+
+.dice-image {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+}
+
+.resource-panel {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 16px;
+    gap: 16px;
+    z-index: 70;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    pointer-events: none;
+}
+
+.resource-player {
+    display: flex;
+    gap: 5px;
+    padding: 6px;
+    border-radius: 6px;
+    background: rgba(0,0,0, 0.4);
+}
+
+.resource-player-red {
+    box-shadow: inset 0 -3px 0 #d84837;
+}
+
+.resource-player-blue {
+    box-shadow: inset 0 -3px 0 #337fce;
+}
+
+.resource-player-orange {
+    box-shadow: inset 0 -3px 0 #e28a26;
+}
+
+.resource-player-white {
+    box-shadow: inset 0 -3px 0 #f2f0e8;
+}
+
+.resource-card {
+    position: relative;
+    width: 56px;
+    height: 84px;
+    flex: 0 0 auto;
+}
+
+.resource-card img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 2px;
+    object-fit: cover;
+}
+
+.resource-count {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-family: system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+
 
 .tile-token {
     position: absolute;
@@ -146,6 +231,6 @@ body {
     font-size: 28px;
     font-weight: 800;
     line-height: 1;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.65);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.0.6);
     pointer-events: none;
 }

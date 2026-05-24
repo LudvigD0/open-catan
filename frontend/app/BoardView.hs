@@ -43,6 +43,9 @@ assetColorName White  = "white"
 houseImage :: Color -> MisoString
 houseImage color = ms ("/static/houses/house-" ++ assetColorName color ++ ".png")
 
+cityImage :: Color -> MisoString
+cityImage color = ms ("/static/cities/city-" ++ assetColorName color ++ ".png")
+
 edgeImage :: Color -> MisoString
 edgeImage color = ms ("/static/edges/edge-" ++ assetColorName color ++ ".png")
 
@@ -58,6 +61,9 @@ tileImage tile =
 
 defaultHouseImage :: MisoString
 defaultHouseImage = ms ("/static/houses/house-white.png" :: String)
+
+defaultCityImage :: MisoString
+defaultCityImage = ms ("/static/cities/city-white.png" :: String)
 
 defaultEdgeImage :: MisoString
 defaultEdgeImage = ms ("/static/edges/edge-white.png" :: String)
@@ -167,18 +173,19 @@ viewNodeSlot (nid, (x, y)) =
     ]
     []
 
--- Ett hus från gamestate
+-- Ett hus eller city från gamestate
 viewBuilding :: GameState -> (Int, (Double, Double)) -> Maybe (View Model Action)
 viewBuilding gs (nid, (x, y)) = do
   boardNode <- Map.lookup (NodeId nid) (nodes (board gs))
   buildingView <$> building boardNode
   where
     buildingView b =
-      let (pid, size) =
+      let (size, imageSrc) =
             case b of
-              Settlement owner -> (owner, 40)
-              City owner       -> (owner, 48)
-          imageSrc = maybe defaultHouseImage houseImage (playerColor gs pid)
+              Settlement owner ->
+                (40, maybe defaultHouseImage houseImage (playerColor gs owner))
+              City owner ->
+                (52, maybe defaultCityImage cityImage (playerColor gs owner))
       in
         H.img_
           [ HP.src_ imageSrc
@@ -317,7 +324,6 @@ viewHex (hex, tile) =
             ]
         ]
       ] ++ tokenView)
-
     
 
 
