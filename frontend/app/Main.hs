@@ -50,11 +50,14 @@ updateModel :: Action -> Effect parent Model Action
 updateModel NoOp = pure ()
 updateModel ClickHex = pure ()
 
+
+-- | Funktion som körs när spelet startas
 updateModel ClickStart = do
   appModel <- get
   put appModel { requestStatus = Loading "Starting game..." }
   requestStartGame
 
+-- | Försöker bygga ett city eller hus beroende på om nod är tom eller ej
 updateModel (ClickNode nid) = do
   appModel <- get
   let action =
@@ -72,6 +75,7 @@ updateModel (ClickNode nid) = do
     }
   requestGameAction action
 
+-- | Kanten som trycktes skickas vidare till requestGameAction
 updateModel (ClickEdge eid) = do
   appModel <- get
   put appModel
@@ -80,16 +84,20 @@ updateModel (ClickEdge eid) = do
     }
   requestGameAction (ActBuildRoad eid)
 
+-- | Skickar vidare förfrågan om Roll Rice till requestGameAction
 updateModel ClickRollDice = do
   appModel <- get
   put appModel { requestStatus = Loading "Rolling dice..." }
   requestGameAction ActRollDice
 
+
+-- | Skickar vidare förfrågan om End Turn till våra api funktioner
 updateModel ClickEndTurn = do
   appModel <- get
   put appModel { requestStatus = Loading "Ending turn..." }
   requestGameAction ActEndTurn
 
+-- | Uppdaterar speltillståndet baserat på response från backend
 updateModel (GotGameResponse response) = do
   appModel <- get
   case response of
@@ -100,11 +108,14 @@ updateModel (GotGameResponse response) = do
         }
     GameErrorResponse err ->
       put appModel { requestStatus = ServerRejected err }
-      
+
+-- | Ifall Api-request misslyckades
 updateModel (ApiRequestFailed message) = do
   appModel <- get
   put appModel { requestStatus = RequestFailed message }
 
+
+-- | Kontrollerar om en nod redan innehåller en byggnad
 nodeHasBuilding :: NodeId -> GameState -> Bool
 nodeHasBuilding nid gs =
   case Map.lookup nid (nodes (board gs)) of
@@ -113,6 +124,8 @@ nodeHasBuilding nid gs =
       Nothing -> False
     Nothing -> False
 
+
+-- | Urprungsmodel
 initialModel :: Model
 initialModel = Model
   { gameState = Nothing
@@ -121,7 +134,7 @@ initialModel = Model
   , requestStatus = Idle
   }
 
---- model fungerar som wrappern för allt den ritar ut (body ungefär)
+-- | Wrapper för allt vi ritar ut, fungerar som en body i html typ
 viewModel :: Model -> View Model Action
 viewModel appModel =
   H.div_
@@ -131,6 +144,8 @@ viewModel appModel =
     , viewGame appModel
     ]
 
+
+-- | Rita ut spelbrädan som använder data från vårt Gamestate, eller Startmeny om ej gamestate finns
 viewGame :: Model -> View Model Action
 viewGame appModel =
   case gameState appModel of
@@ -144,6 +159,8 @@ viewGame appModel =
         , viewResourcePanel gs
         ]
 
+
+-- | Visa start meny
 viewStartMenu :: Model -> View Model Action
 viewStartMenu appModel =
   H.div_
@@ -157,6 +174,8 @@ viewStartMenu appModel =
     , viewRequestStatus appModel
     ]
 
+
+-- | Visa våra knappar
 viewTopMenu :: Model -> GameState -> View Model Action
 viewTopMenu appModel gs =
   H.div_
@@ -184,6 +203,7 @@ viewTopMenu appModel gs =
           ]
         _ -> []
 
+-- | Rita ut bilderna korrekt för vilken tärning som slogs
 viewDice :: GameState -> View Model Action
 viewDice gs =
   case dice gs of
@@ -195,6 +215,7 @@ viewDice gs =
         , viewDiceImage d2
         ]
 
+-- | Visa tärning
 viewDiceImage :: Int -> View Model Action
 viewDiceImage value =
   H.img_
@@ -203,6 +224,7 @@ viewDiceImage value =
     , HP.alt_ (ms ("Dice " ++ show value))
     ]
 
+-- | Förmedla nuvarande requestStatus, används hela tiden
 viewRequestStatus :: Model -> View Model Action
 viewRequestStatus appModel =
   case requestStatus appModel of
@@ -229,7 +251,7 @@ viewResourcePanel gs =
     ]
 
 
-
+-- | Ritar ut varje egen spelares div med antal resource kort de har
 viewPlayerResources :: GameState -> Color -> View Model Action
 viewPlayerResources gs color =
   let playerResources =
@@ -241,6 +263,8 @@ viewPlayerResources gs color =
       [ className ("resource-player resource-player-" <> colorClass color) ]
       (map (viewResourceCard playerResources) resourceOrder)
 
+
+-- | Slår upp antalet för den resource och ritar ut kortet
 viewResourceCard :: Map.Map Resource Int -> Resource -> View Model Action
 viewResourceCard playerResources res =
   H.div_
@@ -254,12 +278,15 @@ viewResourceCard playerResources res =
         [ text (ms (show (Map.findWithDefault 0 res playerResources))) ]
     ]
 
+-- | Helper till ViewPlayerResources för spelarnas färger
 playerColors :: [Color]
 playerColors = [Red, Blue, Orange, White]
 
+-- | Helper för hur spelarens resources visas
 resourceOrder :: [Resource]
 resourceOrder = [Lumber, Ore, Grain, Brick, Wool]
 
+-- | Olika klassnamn beroende på spelarfärg, olika css egenskaper
 colorClass :: Color -> MisoString
 colorClass color =
   case color of
@@ -268,6 +295,7 @@ colorClass color =
     Orange -> "orange"
     White  -> "white"
 
+-- | Korrekt src för bilder
 resourceCardImage :: Resource -> MisoString
 resourceCardImage res =
   case res of
@@ -277,6 +305,8 @@ resourceCardImage res =
     Brick  -> "/static/cards/card-brick.png"
     Wool   -> "/static/cards/card-sheep.png"
 
+
+-- | Skapa strings för resurserna, så alt för bilder blir korrekt
 resourceName :: Resource -> MisoString
 resourceName res =
   case res of
@@ -286,8 +316,8 @@ resourceName res =
     Brick  -> "Brick"
     Wool   -> "Sheep"
   
-    
-----------------
+
+-- | Rita ut Sand    
 viewSand :: View Model Action
 viewSand = 
   H.img_
@@ -296,6 +326,8 @@ viewSand =
     , HP.alt_ "Sand background"
     ]
 
+
+-- | Rita ut vatten
 viewWater :: View Model Action
 viewWater = 
   H.img_

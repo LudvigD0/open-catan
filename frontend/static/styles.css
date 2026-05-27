@@ -167,6 +167,8 @@ body {
     pointer-events: none;
 }
 
+
+
 .resource-player {
     display: flex;
     gap: 5px;

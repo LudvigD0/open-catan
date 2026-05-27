@@ -24,32 +24,38 @@ import Coordinates
 
 -----Helper functions
 
+-- | Plocka ut Int från nodeId
 nodeIdToInt :: NodeId -> Int
 nodeIdToInt (NodeId n) = n
 
+-- | Dobule till misoString inlusive px
 px :: Double -> MisoString
 px n = ms (show n ++ "px")
 
-
+-- | Bild ratio för kanten
 edgeImageRatio :: Double
 edgeImageRatio = 130 / 620
 
+-- | Retunerar färg som en sträng
 assetColorName :: Color -> String
 assetColorName Red    = "red"
 assetColorName Blue   = "blue"
 assetColorName Orange = "orange"
 assetColorName White  = "white"
 
+-- | Skapar Miso Sträng för det hus som ska ritas ut
 houseImage :: Color -> MisoString
 houseImage color = ms ("/static/houses/house-" ++ assetColorName color ++ ".png")
 
+-- | Skapar Miso Sträng för det city som ska ritas ut
 cityImage :: Color -> MisoString
 cityImage color = ms ("/static/cities/city-" ++ assetColorName color ++ ".png")
 
+-- | Skapar Miso Sträng för den kant som ska ritas ut
 edgeImage :: Color -> MisoString
 edgeImage color = ms ("/static/edges/edge-" ++ assetColorName color ++ ".png")
 
--- | Kopplar ihop tiles med sökväg
+-- | Retunerar deras sökväg beroende på Tile
 tileImage :: Tile -> MisoString
 tileImage tile =
   case resource tile of
@@ -60,15 +66,19 @@ tileImage tile =
     Just Brick  -> "/static/hex/brick.png"
     Just Wool   -> "/static/hex/sheep.png"
 
+-- | Default bild för hus
 defaultHouseImage :: MisoString
 defaultHouseImage = ms ("/static/houses/house-white.png" :: String)
 
+-- | Default bild för city
 defaultCityImage :: MisoString
 defaultCityImage = ms ("/static/cities/city-white.png" :: String)
 
+-- | Default bild för kant
 defaultEdgeImage :: MisoString
 defaultEdgeImage = ms ("/static/edges/edge-white.png" :: String)
 
+-- | Om spelare finns så retuneras spelarens färg
 playerColor :: GameState -> PlayerId -> Maybe Color
 playerColor gs pid =
   fst <$> findPlayer (Map.toList (players gs))
@@ -95,7 +105,9 @@ edgePositions size =
     ]
 
 
-
+-- | Visuella catan kordinater
+-- 
+-- Viktigt för att kunna räkna ut rätt antal pixlar för kanter och noder
 visualCatanCords :: [Cord]
 visualCatanCords =
   [ Cord 0 (-2) 2, Cord 1 (-2) 1, Cord 2 (-2) 0
@@ -105,6 +117,8 @@ visualCatanCords =
   , Cord (-2) 2 0, Cord (-1) 2 (-1), Cord 0 2 (-2)
   ]
 
+
+-- | 
 hexCenter :: Double -> Cord -> (Double, Double)
 hexCenter size (Cord q r _s) =
   let q' = fromIntegral q
@@ -113,6 +127,8 @@ hexCenter size (Cord q r _s) =
       y = size * 1.5 * r'
   in (x, y)
 
+
+-- | 
 hexTopLeft :: Double -> Cord -> (Double, Double)
 hexTopLeft size cord =
   let (cx, cy) = hexCenter size cord
@@ -121,7 +137,7 @@ hexTopLeft size cord =
   in (cx - width / 2, cy - height / 2)
 
 
-
+-- | 
 hexCornerOffsets :: Double -> [(Double, Double)]
 hexCornerOffsets size =
   [ (0, -size)
@@ -133,11 +149,11 @@ hexCornerOffsets size =
   ]
 
 
-
+-- | 
 addPixel :: (Double, Double) -> (Double, Double) -> (Double, Double)
 addPixel (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
 
-
+-- | 
 tileNodePositions :: Double -> [(Int, (Double, Double))]
 tileNodePositions size =
   concat
@@ -150,6 +166,7 @@ tileNodePositions size =
     | (cord, nodeIds) <- zip visualCatanCords tileNodeIds -- catanCords
     ]
 
+-- | 
 uniqueNodePositions :: Double -> [(Int, (Double, Double))]
 uniqueNodePositions size =
   Map.toList $ Map.fromList (tileNodePositions size)
@@ -217,6 +234,8 @@ viewRoad gs (eid, endpoints) = do
   let imageSrc = maybe defaultEdgeImage edgeImage (playerColor gs owner)
   pure (viewRoadImage endpoints imageSrc "25" (ClickEdge (EdgeId eid)))
 
+
+-- | Rita ut en väg som tillhör en spelare
 viewRoadImage ::
   ((Double, Double), (Double, Double)) ->
   MisoString ->
@@ -253,6 +272,7 @@ viewRoadImage ((x1, y1), (x2, y2)) imageSrc z action =
       , onClick action
       ]
 
+-- | Klickbara kanter
 viewEdgeShape ::
   ((Double, Double), (Double, Double)) ->
   Double ->
@@ -288,7 +308,7 @@ viewEdgeShape ((x1, y1), (x2, y2)) height z action =
       ]
       []
   
-
+-- | Rita ut våra tiles där vi skickar kordinat och vilken typ av resource/tile
 viewHex :: (Cord, Tile) -> View Model Action
 viewHex (hex, tile) =
   let xy = hexTopLeft 80 hex -- xy kordinaten längst upp till vänster
@@ -327,7 +347,7 @@ viewHex (hex, tile) =
       ] ++ tokenView)
     
 
-
+-- | Wrapper för spelbrädan
 viewBoard :: GameState -> View Model Action
 viewBoard gs =
   let size = 80

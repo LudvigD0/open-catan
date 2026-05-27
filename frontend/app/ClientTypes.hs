@@ -3,6 +3,8 @@ module ClientTypes where
 import Miso (MisoString)
 import Types
 
+
+-- | Vår model som miso såklart behöver för att ändra tillstånd
 data Model = Model
   { gameState :: Maybe GameState
   , selectedNode :: Maybe NodeId
@@ -10,6 +12,8 @@ data Model = Model
   , requestStatus :: RequestStatus
   } deriving Eq
 
+
+-- | Status för requesten
 data RequestStatus
   = Idle
   | Loading MisoString
@@ -17,6 +21,8 @@ data RequestStatus
   | ServerRejected GameError
   deriving Eq
 
+
+-- | Våra miso-Actions
 data Action
   = NoOp
   | ClickStart
