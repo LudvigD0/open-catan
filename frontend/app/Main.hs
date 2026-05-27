@@ -214,11 +214,21 @@ viewRequestStatus appModel =
     ServerRejected err ->
       H.span_ [ className "request-status request-status-error" ] [ text (ms (show err)) ]
 
+-- | Enkel div wrapper för att placera ut players resource-kort 
 viewResourcePanel :: GameState -> View Model Action
 viewResourcePanel gs =
   H.div_
     [ className "resource-panel" ]
-    (map (viewPlayerResources gs) playerColors)
+    [ H.div_
+        []
+        (map (viewPlayerResources gs) (take 2 playerColors))
+
+    , H.div_
+        []
+        (map (viewPlayerResources gs) (drop 2 playerColors))
+    ]
+
+
 
 viewPlayerResources :: GameState -> Color -> View Model Action
 viewPlayerResources gs color =

@@ -49,15 +49,16 @@ cityImage color = ms ("/static/cities/city-" ++ assetColorName color ++ ".png")
 edgeImage :: Color -> MisoString
 edgeImage color = ms ("/static/edges/edge-" ++ assetColorName color ++ ".png")
 
+-- | Kopplar ihop tiles med sökväg
 tileImage :: Tile -> MisoString
 tileImage tile =
   case resource tile of
-    Nothing     -> "/static/desert.png"
-    Just Lumber -> "/static/wood.png"
-    Just Ore    -> "/static/ore.png"
-    Just Grain  -> "/static/wheat.png"
-    Just Brick  -> "/static/brick.png"
-    Just Wool   -> "/static/sheep.png"
+    Nothing     -> "/static/hex/desert.png"
+    Just Lumber -> "/static/hex/wood.png"
+    Just Ore    -> "/static/hex/ore.png"
+    Just Grain  -> "/static/hex/wheat.png"
+    Just Brick  -> "/static/hex/brick.png"
+    Just Wool   -> "/static/hex/sheep.png"
 
 defaultHouseImage :: MisoString
 defaultHouseImage = ms ("/static/houses/house-white.png" :: String)
@@ -341,16 +342,3 @@ viewBoard gs =
     H.div_
       [ className "wrapper" ]
       (hexViews ++ edgeSlotViews ++ nodeSlotViews ++ roadViews ++ buildingViews)
-
-
-
-
-
-{- boardHexes :: [Cord] 
-boardHexes = -- skapar 19 hex
-  [ Cord q r s
-  | q <- [-2..2]
-  , r <- [-2..2]
-  , s <- [-2..2]
-  , q + r + s == 0
-  ] -}
