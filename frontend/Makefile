@@ -29,4 +29,4 @@ refresh:
 
 
 nix-refresh:
-	cd $(ROOT) && nix --extra-experimental-features "nix-command flakes" develop .#wasm --command make -C frontend refresh
+	nix --extra-experimental-features "nix-command flakes" develop .#wasm
