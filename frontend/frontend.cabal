@@ -85,7 +85,7 @@ executable frontend
     build-depends:    base >=4.18 && <5,
                       aeson,
                       bytestring,
-                      miso,
+                      miso == 1.10.0.0,
                       text,
                       common,
                       uuid-types,

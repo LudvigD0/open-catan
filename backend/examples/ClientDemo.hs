@@ -42,7 +42,8 @@ main = withSocketsDo $
 --   | PkgGameAction GameAction
 
 sendEncodedPackage :: WS.Connection -> OCTypes.WSMessage -> IO()
-sendEncodedPackage conn wsMsg = WS.sendTextData conn $ encode wsMsg
+sendEncodedPackage conn wsMsg = WS.sendBinaryData conn $ encode wsMsg
+-- sendEncodedPackage conn wsMsg = WS.sendTextData conn $ encode wsMsg
 
 app_demo :: WS.ClientApp ()
 app_demo conn = do
