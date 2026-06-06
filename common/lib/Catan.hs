@@ -1,14 +1,34 @@
-module Catan where 
+-- | Pure Catan game rules and state transitions.
+module Catan
+  ( initGameState
+  , initPlayer
+  , autoPlace
+  , beginnerPlacements
+  , nextPlayer
+  , endTurn
+  , buildRoad
+  , buildSettlement
+  , buildCity
+  , countVP
+  , checkWinner
+  , tileYield
+  , distributeResources
+  , addResource
+  , matchingTiles
+  ) where
 
--- Libs
+import Data.List (elemIndex)
 import qualified Data.Map as Map 
-import Data.Maybe (maybeToList)
-import Data.UUID.Types
+import Data.Maybe (fromJust, isJust, mapMaybe)
+import Data.UUID.Types (UUID)
 
--- Local
-import Coordinates
-import Types
+import Coordinates (catanBoard)
+import Types 
+import StateLogic
+import PureUtil
+import ValidationLogic
 
+-- | Create a game state with the given player UUIDs and starting player index.
 initGameState :: [UUID] -> Int -> GameState
 initGameState ids start =
     let newPlayers                = map initPlayer ids 
@@ -22,6 +42,7 @@ initGameState ids start =
         , dice        = (0, 0)
         }
 
+-- | Create an empty player record for a UUID.
 initPlayer :: UUID -> Player
 initPlayer uid = Player
     { playerId  = PlayerId uid
@@ -31,7 +52,7 @@ initPlayer uid = Player
     , resources = Map.fromList [(res, 0) | res <- [Lumber, Ore, Grain, Brick, Wool]]
     }
 
--- Uses beginnerplacements to add the starting settlements and road for each player
+-- | Add the fixed initial settlements and roads for all players.
 autoPlace :: GameState -> GameState
 autoPlace gs = foldl placePair gs allPlacements
   where
@@ -40,16 +61,16 @@ autoPlace gs = foldl placePair gs allPlacements
         | (color, pairs) <- beginnerPlacements, (nid, eid) <- pairs]
 
 
--- Adds a settlement and road at the same time 
+-- | Add one initial settlement-road pair without resource costs.
 placePair :: GameState -> (Color, NodeId, EdgeId) -> GameState
 placePair gs (color, nid, eid) =
-    let pid        = playerId $ (players gs) Map.! color
+    let pid        = playerId $ players gs Map.! color
         newBoard   = placeRoad eid pid $ placeSettlement nid pid (board gs)
         newPlayers = addRoadForced color eid $ addSettlementForced color nid (players gs)
     in  gs { board = newBoard, players = newPlayers }
 
 
--- Each tuple: (settlement NodeId, road EdgeId)
+-- | Fixed beginner placements, grouped by player color.
 beginnerPlacements :: [(Color, [(NodeId, EdgeId)])]
 beginnerPlacements =
     [ ( Red
@@ -70,120 +91,134 @@ beginnerPlacements =
         ] )
     ]
 
------------------------------- Util functions ----------------------------------------
--- Get a node from the board by NodeId
-lookupNode :: NodeId -> Board -> Maybe Node
-lookupNode nid brd = Map.lookup nid (nodes brd)
+-- | Return the next player color in the map's turn order.
+nextPlayer :: Color -> Map.Map Color Player -> Color
+nextPlayer current ps =
+    let keys        = Map.keys ps  
+        currentIdx  = fromJust $ elemIndex current keys
+        nextIdx     = (currentIdx + 1) `mod` length keys
+    in  keys !! nextIdx
+  
+-- | Advance to the next player and reset turn-local dice state.
+endTurn :: GameState -> Maybe GameState
+endTurn gs =
+    Just gs
+        { currentTurn = nextPlayer (currentTurn gs) (players gs)
+        , turnPhase = Roll
+        , dice = (0, 0)
+        }
 
--- Get an edge from the board by EdgeId
-lookupEdge :: EdgeId -> Board -> Maybe Edge
-lookupEdge eid brd = Map.lookup eid (edges brd)
+-- * Build actions
 
-lookupTile :: Cord -> Board -> Maybe Tile 
-lookupTile crd brd = Map.lookup crd (tiles brd)
-
-
--- Get a player by color
-getPlayer :: Color -> GameState -> Player
-getPlayer color gs = (players gs) Map.! color 
-
-adjacentNodes :: Node -> Board -> [Node]
-adjacentNodes node brd =
-    concatMap edgeNeighbors (nodeEdges node)
+-- | Build a road for the current player when placement and resources allow it.
+buildRoad :: EdgeId -> GameState -> Maybe GameState
+buildRoad eid gs =
+    case lookupEdge eid (board gs) of
+        Nothing -> Nothing
+        Just edge
+            | isJust (road edge) -> Nothing
+            | not (checkRoadRes gs color) -> Nothing
+            | not (validRoadPlacement edge pid (board gs)) -> Nothing
+            | otherwise ->
+                let newBoard = placeRoad eid pid (board gs)
+                    newPlayers = addRoad color eid (players gs)
+                in Just gs { board = newBoard, players = newPlayers }
   where
-    edgeNeighbors eid =
-        case Map.lookup eid (edges brd) of
-            Nothing -> []
-            Just edge ->
-                let (n1, n2) = edgeNodes edge
-                    other
-                        | n1 == nodeId node = Just n2
-                        | n2 == nodeId node = Just n1
-                        | otherwise         = Nothing
-                in maybe [] (\nid -> maybeToList $ lookupNode nid brd) other
+    color = currentTurn gs
+    pid = playerId $ getPlayer color gs
 
------------------------------- Board State ----------------------------------------
--- Updates a board node with a new settlement belonging to playerid
-placeSettlement :: NodeId -> PlayerId -> Board -> Board
-placeSettlement nid pid brd =
-    brd { nodes = Map.adjust updateNode nid (nodes brd) }
+
+-- | Build a settlement for the current player when placement and resources allow it.
+buildSettlement :: NodeId -> GameState -> Maybe GameState
+buildSettlement nid gs
+    | not (checkSettlementRes gs color) = Nothing
+    | not (validStlmPlacement nid pid (board gs)) = Nothing
+    | otherwise =
+        let newBoard = placeSettlement nid pid (board gs)
+            newPlayers = addSettlement color nid (players gs)
+        in Just gs { board = newBoard, players = newPlayers }
   where
-    updateNode n = n { building = Just (Settlement pid) }
+    color = currentTurn gs
+    pid = playerId $ getPlayer color gs
 
--- Updates a board node with a new city belonging to playerid
-placeCity :: NodeId -> PlayerId -> Board -> Board
-placeCity nid pid brd =
-    brd { nodes = Map.adjust updateNode nid (nodes brd) }
+-- | Upgrade a settlement to a city for the current player when resources allow it.
+buildCity :: NodeId -> GameState -> Maybe GameState
+buildCity nid gs
+    | not (checkCityRes gs color) = Nothing
+    | not (validCityPlacement nid pid (board gs)) = Nothing
+    | otherwise =
+        let newBoard = placeCity nid pid (board gs)
+            newPlayers = addCity color (players gs)
+        in Just gs { board = newBoard, players = newPlayers }
   where
-    updateNode n = n { building = Just (City pid) }
+    color = currentTurn gs
+    pid = playerId $ getPlayer color gs
 
--- Updates a board edge with a new road belonging to playerid
-placeRoad :: EdgeId -> PlayerId -> Board -> Board
-placeRoad eid pid brd =
-    brd { edges = Map.adjust updateEdge eid (edges brd) }
+-- * Victory points
+
+-- | Count victory points from the player's settlements and cities.
+countVP :: Player -> Board -> Int
+countVP p brd =
+    sum $ map vpFor buildingsOwned
   where
-    updateEdge e = e { road = Just (Road pid) }
+    buildingsOwned =
+        mapMaybe (`Map.lookup` nodes brd) (buildings p)
 
------------------------------- Player State ----------------------------------------
+    vpFor node =
+        case building node of
+            Just (Settlement _) -> 1
+            Just (City _)       -> 2
+            _                   -> 0
 
--- Does not add duplicate nodeId since player needs to have settlement
--- to build city. Deducts resources for city 
-addCity :: Color -> Map.Map Color Player -> Map.Map Color Player
-addCity color = Map.adjust updatePlayer color
+-- | Return the first player with at least 10 victory points, if any.
+checkWinner :: GameState -> Maybe Color
+checkWinner gs =
+    foldl check Nothing (Map.toList $ players gs)
   where
-    updatePlayer p =
-        p { resources = updateResources (resources p) }
+    check (Just winner) _      = Just winner
+    check Nothing (color, p)
+        | countVP p (board gs) >= 10 = Just color
+        | otherwise                   = Nothing
 
-    updateResources =
-        Map.mapWithKey deduct
+-- * Resource production
 
-    deduct res amount
-        | res == Grain = amount - 2
-        | res == Ore   = amount - 3
-        | otherwise    = amount
+-- | Resources produced by one tile for each adjacent building owner.
+tileYield :: Tile -> Board -> [(PlayerId, Resource, Int)]
+tileYield tile brd =
+    case resource tile of
+        Nothing  -> []
+        Just res -> concatMap yieldFromNode (tileNodes tile)
+          where
+            yieldFromNode nid =
+                case Map.lookup nid (nodes brd) of
+                    Nothing   -> []
+                    Just node ->
+                        case building node of
+                            Just (Settlement pid) -> [(pid, res, 1)]
+                            Just (City pid)       -> [(pid, res, 2)]
+                            Nothing               -> []
 
--- Adds nodeId to players buildings and deducts resources for settlement 
-addSettlement :: Color -> NodeId -> Map.Map Color Player -> Map.Map Color Player
-addSettlement color nid plyrs =
-    Map.adjust updatePlayer color plyrs
+-- | Distribute resources from all tiles matching the dice roll.
+distributeResources :: Int -> Board -> Map.Map Color Player -> Map.Map Color Player
+distributeResources roll brd ps = Map.fromList $
+    foldl applyYield (Map.toList ps) yields
   where
-    updatePlayer p =
-        p
-          { buildings = nid : buildings p
-          , resources = updateRes (resources p)
-          }
+    yields = concatMap (`tileYield` brd) (matchingTiles roll brd)
 
-    updateRes resM = Map.mapWithKey deduct resM
-    deduct res i
-        | res `elem` [Lumber, Grain, Brick, Wool] = i - 1
-        | otherwise                               = i
+    applyYield plrs (pid, res, amount) = map (giveResource pid res amount) plrs
 
--- Adds edgeId to players roads, deducts resources for road
-addRoad :: Color -> EdgeId -> Map.Map Color Player -> Map.Map Color Player
-addRoad color eid plyrs =
-    Map.adjust updatePlayer color plyrs
-  where
-    updatePlayer p =
-        p
-          { roads = eid : roads p
-          , resources = updateRes (resources p)
-          }
+    giveResource pid res amount (c, p)
+        | playerId p == pid = (c, p { resources = addResource res amount (resources p) })
+        | otherwise         = (c, p)
 
-    updateRes resM = Map.mapWithKey deduct resM
-    deduct res i
-        | res `elem` [Lumber, Brick] = i - 1
-        | otherwise                               = i
-    
--- Does not remove resources
-addSettlementForced :: Color -> NodeId -> Map.Map Color Player -> Map.Map Color Player
-addSettlementForced color nid plyrs =
-    Map.adjust updatePlayer color plyrs
-  where
-    updatePlayer p = p { buildings = nid : buildings p }
+-- | Add an amount of one resource to a resource map.
+addResource :: Resource -> Int -> Map.Map Resource Int -> Map.Map Resource Int
+addResource res amount = Map.insertWith (+) res amount
 
--- Does not remove resources
-addRoadForced :: Color -> EdgeId -> Map.Map Color Player -> Map.Map Color Player
-addRoadForced color eid plyrs =
-    Map.adjust updatePlayer color plyrs
-  where
-    updatePlayer p = p { roads = eid : roads p }  
+-- | Find all non-robber resource tiles that match the dice roll token.
+matchingTiles :: Int -> Board -> [Tile]
+matchingTiles roll (Board tileMap _ _) =
+    [ tile | tile <- Map.elems tileMap,
+      token tile == roll,
+      not (robber tile),
+      isJust (resource tile)]

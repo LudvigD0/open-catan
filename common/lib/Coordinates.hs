@@ -1,40 +1,60 @@
-module Coordinates where
+-- | Static board geometry and construction for the standard Catan board.
+module Coordinates
+  ( hexRange
+  , catanCords
+  , addCord
+  , mkCord
+  , distance
+  , inBounds
+  , directions
+  , neighbours
+  , tileData
+  , catanTiles
+  , catanBoard
+  , tileNodeIds
+  , tileEdgeIds
+  , nodeEdgeMap
+  , edgeNodeMap
+  , edgeNodePairs
+  , nodeTileMap
+  ) where
 
--- Libs
 import qualified Data.Map as Map
 
--- Local
 import Types
 
--- Every valid hex satisfies q + r + s = 0
--- hexRange n generates all cube coords within radius n of the origin
+-- | Generate all cube coordinates within the given radius from the origin.
 hexRange :: Int -> [Cord]
 hexRange n =
     [ Cord q r (-q-r) | q <- [-n..n], r <- [max (-n) (-q-n) .. min n (-q+n)]
     ]
 
--- The 19 tile positions of a standard Catan board (radius 2)
+-- | The 19 tile coordinates of a standard radius-2 Catan board.
 catanCords :: [Cord]
 catanCords = hexRange 2
 
+-- | Add two cube coordinates component-wise.
 addCord :: Cord -> Cord -> Cord
 addCord (Cord q1 r1 s1) (Cord q2 r2 s2) = Cord (q1+q2) (r1+r2) (s1+s2)
 
+-- | Construct a cube coordinate only when it satisfies q + r + s == 0.
 mkCord :: Int -> Int -> Int -> Maybe Cord
 mkCord q r s
     | q + r + s == 0 = Just (Cord q r s)
     | otherwise      = Nothing
 
+-- | Hex distance between two cube coordinates.
 distance :: Cord -> Cord -> Int
 distance (Cord q1 r1 s1) (Cord q2 r2 s2) =
     maximum [abs (q1-q2), abs (r1-r2), abs (s1-s2)]
 
+-- | Check whether a coordinate belongs to the standard radius-2 board.
 inBounds :: Cord -> Bool
 inBounds cord@(Cord q r s) = q + r + s == 0 && distance origin cord <= 2
   where
     origin = Cord 0 0 0
 
--- All surrounding directions to a specific tile
+-- | The six unit directions in cube coordinates.
 directions :: [Cord]
 directions =
     [ Cord  1 (-1)  0
@@ -45,10 +65,11 @@ directions =
     , Cord  0  (-1)  1
     ]
 
+-- | Coordinates adjacent to the given tile coordinate.
 neighbours :: Cord -> [Cord]
 neighbours c = map (addCord c) directions
 
--- Standard resource distribution
+-- | Fixed resource and token distribution used for the generated board.
 tileData :: [(Maybe Resource, Int)]
 tileData =
     -- 3 tiles, top
@@ -108,14 +129,14 @@ makeEdge eid nds = Edge
     , edgeNodes = nds
     }
 
--- Build all 72 edges
+-- | Build all 72 edges before converting their integer keys to 'EdgeId'.
 buildEdges :: Map.Map Int Edge
 buildEdges = Map.fromList
     [ (eid, makeEdge eid (NodeId n1, NodeId n2))
     | (eid, (NodeId n1, NodeId n2)) <- zip [1..] edgeNodePairs
     ]
 
--- Build all 54 nodes
+-- | Build all 54 nodes before converting their integer keys to 'NodeId'.
 buildNodes :: Map.Map Int Node
 buildNodes = Map.fromList
     [ (nid, makeNode nid myEdges myTiles)
@@ -124,7 +145,7 @@ buildNodes = Map.fromList
           myTiles = map TileId (Map.findWithDefault [] nid nodeTileMap)
     ]
 
--- Build the complete Board
+-- | The complete standard board used by new games.
 catanBoard :: Board
 catanBoard = Board
     { tiles = Map.fromList [ (cord, tile) | (cord, tile) <- catanTiles ]
@@ -132,6 +153,7 @@ catanBoard = Board
     , edges = Map.fromList [ (EdgeId eid, edge) | (eid, edge) <- Map.toList buildEdges ]
     }
 
+-- | Node ids surrounding each tile, in tile-number order.
 tileNodeIds :: [[Int]]
 tileNodeIds =
   -- Row 1 (3 tiles)
@@ -160,6 +182,7 @@ tileNodeIds =
   , [42,47,51,54,50,46]  
   ]
 
+-- | Edge ids surrounding each tile, in tile-number order.
 tileEdgeIds :: [[Int]]
 tileEdgeIds =
   -- Row 1 (3 tiles)
@@ -189,7 +212,7 @@ tileEdgeIds =
   ]
 
 
--- The 2-3 edge ids for each node, lookup on nodeId  
+-- | Edge ids incident to each node id.
 nodeEdgeMap :: Map.Map Int [Int]
 nodeEdgeMap = Map.fromList
     [ (1,  [1,2])        
@@ -248,14 +271,14 @@ nodeEdgeMap = Map.fromList
     , (54, [71,72])      
     ]
 
--- nodePair for each edge, lookup on edgeId 
+-- | Node pair for each edge id.
 edgeNodeMap :: Map.Map Int (NodeId, NodeId)
 edgeNodeMap = Map.fromList
     [ (eid, (n1, n2))
     | (eid, (n1, n2)) <- zip [1..] edgeNodePairs
     ]
 
--- The two nodes each edge connects, in edge-number order 1..72
+-- | The two nodes each edge connects, in edge-number order.
 edgeNodePairs :: [(NodeId, NodeId)]
 edgeNodePairs =
     [ (NodeId 4,  NodeId 1) 
@@ -332,7 +355,7 @@ edgeNodePairs =
     , (NodeId 51, NodeId 54)
     ]
 
--- Maps each NodeId to which tileIds contain it
+-- | Tile ids adjacent to each node id.
 nodeTileMap :: Map.Map Int [Int]
 nodeTileMap = Map.fromList
     [ (1,  [0])          -- tile: t0

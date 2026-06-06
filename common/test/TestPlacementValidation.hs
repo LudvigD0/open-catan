@@ -4,8 +4,8 @@ import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import Data.UUID.Types (fromString)
 
-import BuildPhase (validCityPlacement, validStlmPlacement)
-import Catan (adjacentNodes)
+import ValidationLogic
+import PureUtil
 import Types
     ( Board (..)
     , Building (..)

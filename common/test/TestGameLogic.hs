@@ -13,7 +13,6 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-import Catan
 import Types
 import Coordinates
 

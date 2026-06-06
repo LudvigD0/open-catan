@@ -1,3 +1,5 @@
 packages:
   common
   frontend
+
+allow-newer: all:base
